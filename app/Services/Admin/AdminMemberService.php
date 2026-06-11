@@ -1,0 +1,242 @@
+<?php
+
+namespace App\Services\Admin;
+
+use App\Enums\MembershipRole;
+use App\Models\User;
+use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Traits\HandlesUploads;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+
+class AdminMemberService
+{
+    use HandlesUploads;
+
+    public function __construct(
+        private readonly UserRepositoryInterface $users,
+    ) {}
+
+    public function listForScreen(User $actor, ?int $mainMemberId = null): array
+    {
+        $resolvedMainMemberId = $this->resolveListMainMemberId($actor, $mainMemberId);
+
+        if (! $resolvedMainMemberId) {
+            return [];
+        }
+
+        return $this->users->householdMembersForMainMember($resolvedMainMemberId)
+            ->map(fn (User $member) => [
+                'id' => $member->id,
+                'name' => $member->fullName(),
+                'mobile' => $member->mobile_number ?? '—',
+                'house' => $member->houseLabel() ?? '—',
+                'gender' => $member->gender?->label() ?? '—',
+                'membership_type' => $member->roleLabel(),
+                'profile_image_url' => $member->profileImageUrl(),
+                'main_member' => $member->mainMember?->fullName() ?? '—',
+            ])
+            ->values()
+            ->all();
+    }
+
+    public function mainMembersForSelect(User $actor): array
+    {
+        if ($actor->isMainMember()) {
+            return [[
+                'value' => $actor->id,
+                'label' => $actor->fullName(),
+                'house_type' => $actor->house_type?->value,
+                'house_number' => $actor->house_number,
+            ]];
+        }
+
+        return $this->users->mainMembersForSelect()
+            ->map(fn (User $member) => [
+                'value' => $member->id,
+                'label' => $member->fullName(),
+                'house_type' => $member->house_type?->value,
+                'house_number' => $member->house_number,
+            ])
+            ->all();
+    }
+
+    public function defaultMainMemberId(User $actor): ?int
+    {
+        if ($actor->isMainMember()) {
+            return $actor->id;
+        }
+
+        return null;
+    }
+
+    public function canPickMainMember(User $actor): bool
+    {
+        return ! $actor->isMainMember();
+    }
+
+    public function membershipTypesForSelect(): array
+    {
+        return [
+            [
+                'value' => MembershipRole::FamilyMember->value,
+                'label' => __('messages.members_type_family'),
+            ],
+            [
+                'value' => MembershipRole::RentalMember->value,
+                'label' => __('messages.members_type_rental'),
+            ],
+        ];
+    }
+
+    public function assertCanManage(User $actor, User $target, string $action = 'update'): void
+    {
+        Gate::forUser($actor)->authorize('members.manage', [$target, $action]);
+    }
+
+    public function create(User $actor, array $data, ?UploadedFile $idProof, ?UploadedFile $profileImage): User
+    {
+        $mainMember = $this->resolveMainMember($actor, (int) $data['linked_main_member_id']);
+        $payload = $this->buildPayload($data, $mainMember);
+
+        if ($idProof) {
+            $payload['id_proof_path'] = $this->storePublicUpload($idProof, 'users/id-proofs');
+        }
+
+        if ($profileImage) {
+            $payload['profile_image_path'] = $this->storePublicUpload($profileImage, 'users/profile-images');
+        }
+
+        return $this->users->create($payload);
+    }
+
+    public function update(User $actor, User $member, array $data, ?UploadedFile $idProof, ?UploadedFile $profileImage): User
+    {
+        $this->assertCanManage($actor, $member);
+        $mainMember = $this->resolveMainMember($actor, (int) $data['linked_main_member_id'], $member);
+        $payload = $this->buildPayload($data, $mainMember, $member);
+
+        if ($idProof) {
+            $this->deletePublicUpload($member->id_proof_path);
+            $payload['id_proof_path'] = $this->storePublicUpload($idProof, 'users/id-proofs');
+        }
+
+        if ($profileImage) {
+            $this->deletePublicUpload($member->profile_image_path);
+            $payload['profile_image_path'] = $this->storePublicUpload($profileImage, 'users/profile-images');
+        }
+
+        if (empty($data['password'])) {
+            unset($payload['password']);
+        }
+
+        return $this->users->update($member, $payload);
+    }
+
+    public function delete(User $member, User $actor): void
+    {
+        $this->assertCanManage($actor, $member, 'delete');
+
+        if ($member->id === $actor->id) {
+            throw ValidationException::withMessages([
+                'member' => [__('messages.members_delete_self')],
+            ]);
+        }
+
+        $this->deletePublicUpload($member->id_proof_path);
+        $this->deletePublicUpload($member->profile_image_path);
+
+        $this->users->delete($member);
+    }
+
+    public function resolveListMainMemberId(User $actor, ?int $mainMemberId): ?int
+    {
+        if ($actor->isMainMember()) {
+            return $actor->id;
+        }
+
+        if (! $mainMemberId) {
+            return null;
+        }
+
+        $mainMember = $this->users->findById($mainMemberId);
+
+        if (! $mainMember || $mainMember->role !== MembershipRole::MainMember->value) {
+            return null;
+        }
+
+        return $mainMember->id;
+    }
+
+    private function resolveMainMember(User $actor, int $mainMemberId, ?User $existingMember = null): User
+    {
+        if ($actor->isMainMember()) {
+            return $actor;
+        }
+
+        $mainMember = $this->users->findById($mainMemberId);
+
+        if (! $mainMember || $mainMember->role !== MembershipRole::MainMember->value) {
+            throw ValidationException::withMessages([
+                'linked_main_member_id' => [__('messages.members_main_member_required')],
+            ]);
+        }
+
+        if ($existingMember && (int) $existingMember->linked_main_member_id !== $mainMember->id) {
+            throw new AuthorizationException(__('messages.admin_module_forbidden'));
+        }
+
+        return $mainMember;
+    }
+
+    private function buildPayload(array $data, User $mainMember, ?User $member = null): array
+    {
+        $firstName = trim($data['first_name']);
+        $middleName = filled($data['middle_name'] ?? null) ? trim($data['middle_name']) : null;
+        $lastName = trim($data['last_name']);
+
+        $payload = [
+            'first_name' => $firstName,
+            'middle_name' => $middleName,
+            'last_name' => $lastName,
+            'name' => trim(collect([$firstName, $middleName, $lastName])->filter()->implode(' ')),
+            'caste' => filled($data['caste'] ?? null) ? trim($data['caste']) : null,
+            'gender' => $data['gender'],
+            'house_type' => $data['house_type'] ?? $mainMember->house_type?->value,
+            'house_number' => trim($data['house_number'] ?? $mainMember->house_number ?? ''),
+            'mobile_number' => trim($data['mobile_number']),
+            'alternate_number' => filled($data['alternate_number'] ?? null) ? trim($data['alternate_number']) : null,
+            'email' => trim($data['email']),
+            'username' => trim($data['username']),
+            'role' => $this->resolveMembershipRole($data),
+            'linked_main_member_id' => $mainMember->id,
+        ];
+
+        if (filled($data['password'] ?? null)) {
+            $payload['password'] = $data['password'];
+        } elseif (! $member) {
+            $payload['password'] = Str::password(12);
+        }
+
+        return $payload;
+    }
+
+    private function resolveMembershipRole(array $data): string
+    {
+        $type = $data['membership_type'] ?? MembershipRole::FamilyMember->value;
+
+        if (! in_array($type, [
+            MembershipRole::FamilyMember->value,
+            MembershipRole::RentalMember->value,
+        ], true)) {
+            throw ValidationException::withMessages([
+                'membership_type' => [__('messages.members_type_invalid')],
+            ]);
+        }
+
+        return $type;
+    }
+}

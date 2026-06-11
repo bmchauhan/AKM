@@ -18,7 +18,7 @@ class UserRegistrationService
             'email' => $data['email'],
             'username' => $data['username'],
             'password' => $data['password'],
-            'role' => $data['role'] ?? UserRole::Member->value,
+            'role' => $data['role'] ?? 'family_member',
         ]);
     }
 }

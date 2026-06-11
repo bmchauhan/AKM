@@ -21,7 +21,7 @@ class RegisterUserRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'username' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],
             'password' => ['required', 'confirmed', Password::defaults()],
-            'role' => ['nullable', 'string', Rule::in(array_column(UserRole::cases(), 'value'))],
+            'role' => ['nullable', 'string', Rule::exists('roles', 'slug')],
         ];
     }
 }

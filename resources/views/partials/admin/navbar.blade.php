@@ -14,16 +14,14 @@
     </h1>
   </div>
 
-  <div class="flex items-center gap-4">
-    <span class="hidden text-sm text-[#E6EBF4]/70 sm:inline">
-      {{ auth()->user()->name ?? __('messages.admin_panel') }}
-    </span>
+  <div class="flex items-center gap-3 sm:gap-4">
     <x-common.language-switcher />
     <a
       href="{{ url('/') }}"
-      class="rounded bg-[#AB1E23] px-3 py-1.5 text-sm font-medium text-[#E6EBF4] shadow transition hover:bg-[#E6C280] hover:text-[#080D21]"
+      class="hidden rounded bg-[#AB1E23] px-3 py-1.5 text-sm font-medium text-[#E6EBF4] shadow transition hover:bg-[#E6C280] hover:text-[#080D21] sm:inline-block"
     >
       {{ __('messages.view_site') }}
     </a>
+    <x-admin.profile-menu />
   </div>
 </header>

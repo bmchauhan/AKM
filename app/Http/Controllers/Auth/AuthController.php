@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\Auth\AuthService;
+use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -30,6 +31,8 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        Toast::success(__('messages.login_success'));
+
         return redirect()->intended(route('admin.dashboard'));
     }
 
@@ -40,6 +43,8 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()
+            ->route('login')
+            ->with('toasts', [['type' => 'info', 'message' => __('messages.logout_success')]]);
     }
 }

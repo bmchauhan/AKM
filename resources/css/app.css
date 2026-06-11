@@ -45,3 +45,126 @@ html {
     background-color: #e6c280;
     border-radius: 9999px;
 }
+
+/* Notyf — अक्षरयुग brand toasts */
+.notyf {
+    top: 1.25rem !important;
+    right: 1.25rem !important;
+    left: auto !important;
+    bottom: auto !important;
+    max-width: calc(100vw - 2rem);
+    padding: 0;
+}
+
+.notyf__toast.akm-toast {
+    width: 20rem;
+    max-width: calc(100vw - 2.5rem);
+    min-height: auto;
+    border-radius: 0.75rem;
+    border: 1px solid #e6ebf4;
+    box-shadow:
+        0 4px 6px rgb(8 13 33 / 4%),
+        0 12px 28px rgb(8 13 33 / 10%);
+    font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    padding: 0 !important;
+}
+
+.notyf__toast.akm-toast--success {
+    border-left: 4px solid #6dbf92;
+    background-color: #f4fbf6 !important;
+}
+
+.notyf__toast.akm-toast--error {
+    border-left: 4px solid #ab1e23;
+    background-color: #fff !important;
+}
+
+.notyf__toast.akm-toast--warning {
+    border-left: 4px solid #e6c280;
+    background-color: #fffbf2 !important;
+}
+
+.notyf__toast.akm-toast--info {
+    border-left: 4px solid #080d21;
+    background-color: #fff !important;
+}
+
+.notyf__toast.akm-toast .notyf__wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem 0.75rem 0.875rem 1rem;
+}
+
+.notyf__toast.akm-toast .notyf__icon {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+    border-radius: 9999px;
+    background-color: #eceae1;
+}
+
+.notyf__toast.akm-toast--error .notyf__icon {
+    background-color: rgb(229 152 155 / 22%);
+}
+
+.notyf__toast.akm-toast--success .notyf__icon {
+    background-color: #dff3e6;
+}
+
+.notyf__toast.akm-toast--warning .notyf__icon {
+    background-color: rgb(230 194 128 / 35%);
+}
+
+.notyf__toast.akm-toast--info .notyf__icon {
+    background-color: #e6ebf4;
+}
+
+.akm-toast__icon {
+    width: 1.125rem;
+    height: 1.125rem;
+}
+
+.notyf__toast.akm-toast .notyf__message {
+    flex: 1;
+    padding: 0.125rem 0 0;
+    color: #0f141e;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.45;
+    vertical-align: unset;
+}
+
+.notyf__toast.akm-toast .notyf__dismiss {
+    position: static;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    padding: 0.625rem 0.75rem 0 0;
+    background: transparent !important;
+}
+
+.notyf__toast.akm-toast .notyf__dismiss-btn {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    opacity: 0.45;
+    background-color: transparent !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23080D21' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 18L18 6M6 6l12 12'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 0.875rem;
+}
+
+.notyf__toast.akm-toast .notyf__dismiss-btn:hover {
+    opacity: 0.85;
+}
+
+.notyf__toast.akm-toast .notyf__dismiss-btn::before,
+.notyf__toast.akm-toast .notyf__dismiss-btn::after {
+    display: none;
+}

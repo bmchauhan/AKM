@@ -1,6 +1,13 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\MemberController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\PasswordController;
+use App\Http\Controllers\Admin\ProfileController;
+use App\Http\Controllers\Admin\Settings\ModuleController;
+use App\Http\Controllers\Admin\Settings\PermissionController;
+use App\Http\Controllers\Admin\Settings\RoleController;
 use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,5 +35,71 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+        Route::get('/reset-password', [PasswordController::class, 'edit'])->name('password.edit');
+        Route::put('/reset-password', [PasswordController::class, 'update'])->name('password.update');
+
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/', [UserController::class, 'index'])
+                ->middleware('admin.module:users,read')
+                ->name('index');
+            Route::get('/create', [UserController::class, 'create'])
+                ->middleware('admin.module:users,create')
+                ->name('create');
+            Route::post('/', [UserController::class, 'store'])
+                ->middleware('admin.module:users,create')
+                ->name('store');
+            Route::get('/{user}/edit', [UserController::class, 'edit'])
+                ->middleware('admin.module:users,update')
+                ->name('edit');
+            Route::put('/{user}', [UserController::class, 'update'])
+                ->middleware('admin.module:users,update')
+                ->name('update');
+            Route::delete('/{user}', [UserController::class, 'destroy'])
+                ->middleware('admin.module:users,delete')
+                ->name('destroy');
+        });
+
+        Route::prefix('members')->name('members.')->group(function () {
+            Route::get('/', [MemberController::class, 'index'])
+                ->middleware('admin.module:members,read')
+                ->name('index');
+            Route::get('/create', [MemberController::class, 'create'])
+                ->middleware('admin.module:members,create')
+                ->name('create');
+            Route::post('/', [MemberController::class, 'store'])
+                ->middleware('admin.module:members,create')
+                ->name('store');
+            Route::get('/{member}/edit', [MemberController::class, 'edit'])
+                ->middleware('admin.module:members,update')
+                ->name('edit');
+            Route::put('/{member}', [MemberController::class, 'update'])
+                ->middleware('admin.module:members,update')
+                ->name('update');
+            Route::delete('/{member}', [MemberController::class, 'destroy'])
+                ->middleware('admin.module:members,delete')
+                ->name('destroy');
+        });
+
+        Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('/', fn () => redirect()->route('admin.settings.roles.index'))
+                ->middleware('admin.module:settings,read')
+                ->name('index');
+            Route::get('/modules', [ModuleController::class, 'index'])
+                ->middleware('admin.module:settings,read')
+                ->name('modules.index');
+            Route::get('/permissions', [PermissionController::class, 'index'])
+                ->middleware('admin.module:settings,read')
+                ->name('permissions.index');
+            Route::put('/permissions', [PermissionController::class, 'sync'])
+                ->middleware('admin.module:settings,update')
+                ->name('permissions.sync');
+            Route::get('/roles', [RoleController::class, 'index'])
+                ->middleware('admin.module:settings,read')
+                ->name('roles.index');
+            Route::put('/roles', [RoleController::class, 'sync'])
+                ->middleware('admin.module:settings,update')
+                ->name('roles.sync');
+        });
     });
 });

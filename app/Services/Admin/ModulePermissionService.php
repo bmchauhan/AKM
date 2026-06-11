@@ -1,0 +1,134 @@
+<?php
+
+namespace App\Services\Admin;
+
+use App\Enums\ModulePermissionAction;
+use App\Enums\UserRole;
+use App\Models\Module;
+use App\Models\Role;
+use App\Repositories\Contracts\ModuleRepositoryInterface;
+use Illuminate\Support\Facades\DB;
+
+class ModulePermissionService
+{
+    public function __construct(
+        private readonly ModuleRepositoryInterface $modules,
+    ) {}
+
+    public function screenData(): array
+    {
+        $modules = Module::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'slug', 'name', 'description', 'is_system']);
+
+        $roles = Role::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'short_form', 'slug', 'is_system']);
+
+        $permissions = $this->loadPermissionsMap();
+
+        return [
+            'modules' => $modules->map(fn ($module) => [
+                'id' => $module->id,
+                'slug' => $module->slug,
+                'name' => $module->name,
+                'description' => $module->description ?? '',
+                'is_system' => $module->is_system,
+                'settings_only' => $module->slug === 'settings',
+            ])->values()->all(),
+            'roles' => $roles->map(fn ($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'short_form' => $role->short_form,
+                'slug' => $role->slug,
+                'is_system' => $role->is_system,
+                'is_super_admin' => $role->slug === UserRole::SuperAdmin->value,
+            ])->values()->all(),
+            'permissions' => $permissions,
+        ];
+    }
+
+    public function syncForRole(int $roleId, array $permissions): void
+    {
+        $role = Role::query()->findOrFail($roleId);
+
+        if ($role->slug === UserRole::SuperAdmin->value) {
+            $this->syncSuperAdminPermissions($role);
+
+            return;
+        }
+
+        $settingsModuleId = Module::query()->where('slug', 'settings')->value('id');
+
+        $normalized = collect($permissions)
+            ->map(function (array $permission) use ($settingsModuleId, $role) {
+                $moduleId = (int) ($permission['module_id'] ?? 0);
+
+                if ($settingsModuleId && $moduleId === (int) $settingsModuleId && $role->slug !== UserRole::SuperAdmin->value) {
+                    return [
+                        'module_id' => $moduleId,
+                        'can_create' => false,
+                        'can_read' => false,
+                        'can_update' => false,
+                        'can_delete' => false,
+                    ];
+                }
+
+                return [
+                    'module_id' => $moduleId,
+                    'can_create' => (bool) ($permission['can_create'] ?? false),
+                    'can_read' => (bool) ($permission['can_read'] ?? false),
+                    'can_update' => (bool) ($permission['can_update'] ?? false),
+                    'can_delete' => (bool) ($permission['can_delete'] ?? false),
+                ];
+            })
+            ->all();
+
+        $this->modules->syncRolePermissions($roleId, $normalized);
+    }
+
+    public function roleCanOnModule(string $roleSlug, string $moduleSlug, ModulePermissionAction|string $action): bool
+    {
+        if ($roleSlug === UserRole::SuperAdmin->value) {
+            return true;
+        }
+
+        return $this->modules->roleCanOnModule($roleSlug, $moduleSlug, $action);
+    }
+
+    private function syncSuperAdminPermissions(Role $role): void
+    {
+        $allFlags = [
+            'can_create' => true,
+            'can_read' => true,
+            'can_update' => true,
+            'can_delete' => true,
+        ];
+
+        $syncData = Module::query()
+            ->pluck('id')
+            ->mapWithKeys(fn ($id) => [(int) $id => $allFlags])
+            ->all();
+
+        $role->modules()->sync($syncData);
+    }
+
+    private function loadPermissionsMap(): array
+    {
+        $map = [];
+
+        DB::table('module_role')
+            ->get()
+            ->each(function ($row) use (&$map) {
+                $map[$row->role_id][$row->module_id] = [
+                    'can_create' => (bool) $row->can_create,
+                    'can_read' => (bool) $row->can_read,
+                    'can_update' => (bool) $row->can_update,
+                    'can_delete' => (bool) $row->can_delete,
+                ];
+            });
+
+        return $map;
+    }
+}

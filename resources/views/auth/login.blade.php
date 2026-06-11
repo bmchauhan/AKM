@@ -13,6 +13,8 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="locale-{{ app()->getLocale() }} flex min-h-screen items-center justify-center bg-[#ECEAE1] px-4 py-12 text-[#0F141E] antialiased">
+    <x-common.toast-bridge />
+
     <div class="w-full max-w-md">
         <div class="mb-8 text-center">
             <a href="{{ url('/') }}" class="inline-flex justify-center">
@@ -31,13 +33,7 @@
         </div>
 
         <div class="rounded-2xl border border-[#E6EBF4] bg-white p-6 shadow-sm sm:p-8">
-            @if ($errors->any())
-                <div class="mb-4 rounded-lg border border-[#E5989B]/50 bg-[#E5989B]/15 px-4 py-3 text-sm text-[#AB1E23]">
-                    {{ $errors->first() }}
-                </div>
-            @endif
-
-            <form method="POST" action="{{ route('login') }}" class="space-y-4">
+            <form method="POST" action="{{ route('login') }}" class="space-y-4" autocomplete="on" novalidate>
                 @csrf
 
                 <x-common.input
@@ -45,16 +41,15 @@
                     :label="__('messages.login_field')"
                     :placeholder="__('messages.login_field_placeholder')"
                     :value="old('login')"
-                    required
+                    autocomplete="username"
                     autofocus
                 />
 
-                <x-common.input
+                <x-common.password
                     name="password"
-                    type="password"
                     :label="__('messages.auth_password')"
                     :placeholder="__('messages.auth_password_placeholder')"
-                    required
+                    autocomplete="current-password"
                 />
 
                 <label class="flex items-center gap-2 text-sm text-[#0F141E]">

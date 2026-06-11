@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -29,5 +30,18 @@ class AuthService
     public function logout(): void
     {
         Auth::logout();
+    }
+
+    public function updatePassword(User $user, string $currentPassword, string $newPassword): void
+    {
+        if (! Hash::check($currentPassword, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => [__('messages.password_current_invalid')],
+            ]);
+        }
+
+        $user->update([
+            'password' => $newPassword,
+        ]);
     }
 }

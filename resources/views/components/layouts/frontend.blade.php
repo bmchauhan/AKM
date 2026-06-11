@@ -23,6 +23,8 @@
     {{ $head ?? '' }}
 </head>
 <body class="locale-{{ app()->getLocale() }} flex min-h-screen flex-col bg-[#ECEAE1] text-[#0F141E] antialiased">
+    <x-common.toast-bridge />
+
     <x-frontend.header />
 
     {{ $slot }}

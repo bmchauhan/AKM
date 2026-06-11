@@ -25,6 +25,8 @@
     {{ $head ?? '' }}
 </head>
 <body class="locale-{{ app()->getLocale() }} min-h-screen bg-[#ECEAE1] text-[#0F141E] antialiased">
+    <x-common.toast-bridge />
+
     <div class="flex min-h-screen">
         @include('partials.admin.sidebar')
 
