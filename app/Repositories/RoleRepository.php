@@ -40,10 +40,14 @@ class RoleRepository implements RoleRepositoryInterface
 
     public function usersCount(string $slug): int
     {
-        return Role::query()
-            ->where('slug', $slug)
-            ->first()
-            ?->users()
-            ->count() ?? 0;
+        return \App\Models\User::query()
+            ->where(function ($query) use ($slug) {
+                $query->where('committee_role', $slug);
+
+                if ($slug === \App\Enums\UserRole::SuperAdmin->value) {
+                    $query->orWhere('role', $slug);
+                }
+            })
+            ->count();
     }
 }

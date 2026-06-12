@@ -12,7 +12,9 @@
                 'mainMembers' => $mainMembers,
                 'membershipTypes' => $membershipTypes,
                 'defaultMainMemberId' => $defaultMainMemberId,
+                'defaultHouseholdScope' => $defaultHouseholdScope ?? 'self',
                 'canPickMainMember' => $canPickMainMember,
+                'canChooseHouseholdScope' => $canChooseHouseholdScope,
             ])
 
             <div class="mt-8 flex flex-wrap gap-3 border-t border-[#E6EBF4] pt-6">

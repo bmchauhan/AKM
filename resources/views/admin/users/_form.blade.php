@@ -1,6 +1,7 @@
 @props([
     'user' => null,
-    'roles' => [],
+    'membershipTypes' => [],
+    'committeeRoles' => [],
 ])
 
 @php
@@ -13,9 +14,12 @@
         'value' => $h->value,
         'label' => $h->label(),
     ])->all();
+    $selectedMembership = old('membership_type', $user?->membership_type ?? \App\Enums\MembershipRole::MainMember->value);
+    $selectedCommittee = old('committee_role', $user?->committee_role ?? '');
+    $showCommittee = count($committeeRoles) > 0;
 @endphp
 
-<div class="space-y-8">
+<div class="space-y-8" x-data="{ membershipType: @json($selectedMembership) }">
     <section class="space-y-4">
         <h3 class="text-sm font-bold uppercase tracking-wide text-[#080D21]">{{ __('messages.users_section_profile') }}</h3>
 
@@ -139,15 +143,40 @@
             />
         </div>
 
-        <x-common.select
-            name="role"
-            :label="__('messages.users_role')"
-            :options="$roles"
-            :value="old('role', $user?->role)"
-            required
-        >
-            <option value="">{{ __('messages.users_select_option') }}</option>
-        </x-common.select>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <x-common.select
+                    name="membership_type"
+                    :label="__('messages.users_membership_type')"
+                    :options="$membershipTypes"
+                    :value="$selectedMembership"
+                    x-model="membershipType"
+                    required
+                >
+                    <option value="">{{ __('messages.users_select_option') }}</option>
+                </x-common.select>
+            </div>
+
+            @if ($showCommittee)
+                <div x-show="membershipType !== 'rental_member'" x-cloak>
+                    <x-common.select
+                        name="committee_role"
+                        :label="__('messages.users_committee_role')"
+                        :options="$committeeRoles"
+                        :value="$selectedCommittee"
+                        x-bind:disabled="membershipType === 'rental_member'"
+                    >
+                    </x-common.select>
+                    <p class="mt-1 text-xs text-[#0F141E]/50">{{ __('messages.users_committee_hint') }}</p>
+                </div>
+            @elseif ($isEdit && filled($user?->committee_role))
+                <div>
+                    <p class="text-sm font-medium text-[#080D21]">{{ __('messages.users_committee_role') }}</p>
+                    <p class="mt-1 text-sm text-[#0F141E]">{{ $user->roleLabel() }}</p>
+                    <p class="mt-1 text-xs text-[#0F141E]/50">{{ __('messages.users_committee_readonly') }}</p>
+                </div>
+            @endif
+        </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
             <x-common.password

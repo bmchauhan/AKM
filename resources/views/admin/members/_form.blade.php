@@ -4,10 +4,14 @@
     'membershipTypes' => [],
     'defaultMainMemberId' => null,
     'canPickMainMember' => true,
+    'canChooseHouseholdScope' => false,
+    'defaultHouseholdScope' => 'self',
 ])
 
 @php
     $isEdit = $member !== null;
+    $actor = auth()->user();
+    $actorMainMemberId = $actor?->id;
     $genderOptions = collect(\App\Enums\Gender::cases())->map(fn ($g) => [
         'value' => $g->value,
         'label' => $g->label(),
@@ -20,17 +24,33 @@
         'value' => $m['value'],
         'label' => $m['label'],
     ])->all();
-    $selectedMainMemberId = old('linked_main_member_id', $member?->linked_main_member_id ?? $defaultMainMemberId);
-    $selectedMembershipType = old('membership_type', $member?->role ?? \App\Enums\MembershipRole::FamilyMember->value);
+    $defaultHouseholdScope = old(
+        'household_scope',
+        $isEdit
+            ? ((int) $member?->linked_main_member_id !== (int) $actorMainMemberId ? 'others' : 'self')
+            : $defaultHouseholdScope,
+    );
+    $selectedMainMemberId = old(
+        'linked_main_member_id',
+        $defaultHouseholdScope === 'others'
+            ? ($member?->linked_main_member_id ?? $defaultMainMemberId)
+            : $actorMainMemberId,
+    );
+    $selectedMembershipType = old('membership_type', $member?->membership_type ?? $member?->role ?? \App\Enums\MembershipRole::FamilyMember->value);
 @endphp
 
 <div
     x-data="{
         mainMembers: @js($mainMembers),
         membershipType: @js($selectedMembershipType),
+        householdScope: @js($defaultHouseholdScope),
+        actorMainMemberId: @js((int) $actorMainMemberId),
         selectedMainMemberId: @js((int) $selectedMainMemberId),
         applyHouseFromMainMember() {
-            const match = this.mainMembers.find((item) => Number(item.value) === Number(this.selectedMainMemberId));
+            const targetId = this.householdScope === 'self'
+                ? this.actorMainMemberId
+                : Number(this.selectedMainMemberId);
+            const match = this.mainMembers.find((item) => Number(item.value) === targetId);
             if (! match) return;
             const houseType = document.getElementById('house_type');
             const houseNumber = document.getElementById('house_number');
@@ -39,7 +59,8 @@
         }
     }"
     class="space-y-8"
-    x-init="if (selectedMainMemberId) applyHouseFromMainMember()"
+    x-init="applyHouseFromMainMember()"
+    x-effect="applyHouseFromMainMember()"
 >
     <section class="space-y-4">
         <h3 class="text-sm font-bold uppercase tracking-wide text-[#080D21]">{{ __('messages.members_section_household') }}</h3>
@@ -55,7 +76,59 @@
             <option value="">{{ __('messages.users_select_option') }}</option>
         </x-common.select>
 
-        @if ($canPickMainMember)
+        @if ($canChooseHouseholdScope)
+            <input
+                type="hidden"
+                name="linked_main_member_id"
+                :value="householdScope === 'self' ? actorMainMemberId : (selectedMainMemberId || '')"
+            >
+
+            <div class="space-y-3">
+                <p class="text-sm font-semibold text-[#080D21]">{{ __('messages.members_household_scope_label') }}</p>
+                <div class="flex flex-wrap gap-3">
+                    <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#E6EBF4] bg-white px-4 py-2.5 text-sm font-medium text-[#0F141E] shadow-sm transition has-[:checked]:border-[#AB1E23] has-[:checked]:bg-[#E6EBF4]">
+                        <input
+                            type="radio"
+                            name="household_scope"
+                            value="self"
+                            class="h-4 w-4 border-[#E6EBF4] text-[#AB1E23] focus:ring-[#AB1E23]/20"
+                            x-model="householdScope"
+                        >
+                        {{ __('messages.members_household_scope_self') }}
+                    </label>
+                    <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#E6EBF4] bg-white px-4 py-2.5 text-sm font-medium text-[#0F141E] shadow-sm transition has-[:checked]:border-[#AB1E23] has-[:checked]:bg-[#E6EBF4]">
+                        <input
+                            type="radio"
+                            name="household_scope"
+                            value="others"
+                            class="h-4 w-4 border-[#E6EBF4] text-[#AB1E23] focus:ring-[#AB1E23]/20"
+                            x-model="householdScope"
+                        >
+                        {{ __('messages.members_household_scope_others') }}
+                    </label>
+                </div>
+            </div>
+
+            <div x-show="householdScope === 'self'" x-cloak>
+                <div class="rounded-xl border border-[#E6EBF4] bg-[#E6EBF4]/40 px-4 py-3 text-sm text-[#0F141E]/80">
+                    {{ __('messages.members_main_member_self', ['name' => $actor->fullName()]) }}
+                    @if ($actor->houseLabel())
+                        <span class="mt-1 block text-xs text-[#0F141E]/60">{{ $actor->houseLabel() }}</span>
+                    @endif
+                </div>
+            </div>
+
+            <div x-show="householdScope === 'others'" x-cloak>
+                <x-common.searchable-select
+                    name="main_member_picker"
+                    :label="__('messages.members_main_member')"
+                    :options="$mainMemberOptions"
+                    :value="$selectedMainMemberId"
+                    :placeholder="__('messages.members_select_main_member')"
+                    x-on:searchable-select-changed="selectedMainMemberId = Number($event.detail.value) || ''; applyHouseFromMainMember()"
+                />
+            </div>
+        @elseif ($canPickMainMember)
             <x-common.searchable-select
                 name="linked_main_member_id"
                 :label="__('messages.members_main_member')"
@@ -68,7 +141,7 @@
         @else
             <input type="hidden" name="linked_main_member_id" value="{{ $defaultMainMemberId }}">
             <div class="rounded-xl border border-[#E6EBF4] bg-[#E6EBF4]/40 px-4 py-3 text-sm text-[#0F141E]/80">
-                {{ __('messages.members_main_member_self', ['name' => auth()->user()->fullName()]) }}
+                {{ __('messages.members_main_member_self', ['name' => $actor->fullName()]) }}
             </div>
         @endif
 

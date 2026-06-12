@@ -31,35 +31,77 @@ class MemberController extends Controller
                 $this->members->rememberSelectedMainMember($actor, $request->integer('main_member_id'));
             }
 
-            return redirect()->route('admin.members.index');
+            $redirectParams = $this->members->canChooseHouseholdScope($actor)
+                ? ['tab' => 'others']
+                : [];
+
+            return redirect()->route('admin.members.index', $redirectParams);
         }
 
         $mainMemberId = $this->members->selectedMainMemberId($actor);
+        $canChooseHouseholdScope = $this->members->canChooseHouseholdScope($actor);
+        $othersMainMemberId = $this->members->othersMainMemberId($actor, $mainMemberId);
+
+        $activeHouseholdTab = in_array($request->query('tab'), ['self', 'others'], true)
+            ? $request->query('tab')
+            : ($othersMainMemberId ? 'others' : 'self');
 
         return view('admin.members.index', [
-            'members' => $this->members->listForScreen($actor, $mainMemberId),
-            'mainMembers' => $this->members->mainMembersForSelect($actor),
-            'selectedMainMemberId' => $mainMemberId,
+            'members' => $canChooseHouseholdScope
+                ? []
+                : $this->members->listForScreen($actor, $mainMemberId),
+            'ownHouseholdMembers' => $canChooseHouseholdScope
+                ? $this->members->listForScreen($actor, $actor->id)
+                : [],
+            'othersMembers' => $canChooseHouseholdScope && $othersMainMemberId
+                ? $this->members->listForScreen($actor, $othersMainMemberId)
+                : [],
+            'mainMembers' => $this->members->mainMembersForOthersSelect($actor),
+            'selectedMainMemberId' => $othersMainMemberId ?? $mainMemberId,
+            'activeHouseholdTab' => $activeHouseholdTab,
             'canPickMainMember' => $this->members->canPickMainMember($actor),
+            'canChooseHouseholdScope' => $canChooseHouseholdScope,
             'membershipTypes' => $this->members->membershipTypesForSelect(),
         ]);
     }
 
     public function selectHousehold(SelectHouseholdRequest $request): RedirectResponse
     {
-        $this->members->rememberSelectedMainMember(auth()->user(), $request->integer('main_member_id'));
+        $actor = auth()->user();
+        $this->members->rememberSelectedMainMember($actor, $request->integer('main_member_id'));
 
-        return redirect()->route('admin.members.index');
+        $redirectParams = $this->members->canChooseHouseholdScope($actor)
+            ? ['tab' => 'others']
+            : [];
+
+        return redirect()->route('admin.members.index', $redirectParams);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $actor = auth()->user();
+        $canChooseHouseholdScope = $this->members->canChooseHouseholdScope($actor);
+        $householdScope = 'self';
+
+        if ($canChooseHouseholdScope && $request->query('scope') === 'others') {
+            $householdScope = 'others';
+        }
+
+        $othersMainMemberId = $this->members->othersMainMemberId(
+            $actor,
+            $this->members->selectedMainMemberId($actor),
+        );
 
         return view('admin.members.create', [
-            'mainMembers' => $this->members->mainMembersForSelect($actor),
-            'defaultMainMemberId' => $this->members->selectedMainMemberId($actor),
+            'mainMembers' => $householdScope === 'others'
+                ? $this->members->mainMembersForOthersSelect($actor)
+                : $this->members->mainMembersForSelect($actor),
+            'defaultMainMemberId' => $householdScope === 'others'
+                ? ($othersMainMemberId ?? $actor->id)
+                : $actor->id,
+            'defaultHouseholdScope' => $householdScope,
             'canPickMainMember' => $this->members->canPickMainMember($actor),
+            'canChooseHouseholdScope' => $canChooseHouseholdScope,
             'membershipTypes' => $this->members->membershipTypesForSelect(),
         ]);
     }
@@ -113,6 +155,7 @@ class MemberController extends Controller
             'mainMembers' => $this->members->mainMembersForSelect($actor),
             'defaultMainMemberId' => $member->linked_main_member_id,
             'canPickMainMember' => $this->members->canPickMainMember($actor),
+            'canChooseHouseholdScope' => $this->members->canChooseHouseholdScope($actor),
             'membershipTypes' => $this->members->membershipTypesForSelect(),
         ]);
     }
@@ -170,7 +213,7 @@ class MemberController extends Controller
 
     private function ensureHouseholdMember(User $member): void
     {
-        if (! in_array($member->role, [
+        if (! in_array($member->membership_type, [
             MembershipRole::FamilyMember->value,
             MembershipRole::RentalMember->value,
         ], true)) {

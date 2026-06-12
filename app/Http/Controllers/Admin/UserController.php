@@ -48,8 +48,11 @@ class UserController extends Controller
 
     public function create(): View
     {
+        $actor = auth()->user();
+
         return view('admin.users.create', [
-            'roles' => $this->users->rolesForSelect(auth()->user()),
+            'membershipTypes' => $this->users->membershipTypesForSelect($actor),
+            'committeeRoles' => $this->users->committeeRolesForSelect($actor),
         ]);
     }
 
@@ -87,9 +90,12 @@ class UserController extends Controller
 
         $this->users->assertCanManage(auth()->user(), $user);
 
+        $actor = auth()->user();
+
         return view('admin.users.edit', [
             'user' => $user,
-            'roles' => $this->users->rolesForSelect(auth()->user()),
+            'membershipTypes' => $this->users->membershipTypesForSelect($actor),
+            'committeeRoles' => $this->users->committeeRolesForSelect($actor),
         ]);
     }
 

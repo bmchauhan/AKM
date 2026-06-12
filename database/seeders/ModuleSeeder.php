@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\MembershipRole;
 use App\Enums\UserRole;
 use App\Models\Module;
 use App\Models\Role;
@@ -61,8 +60,6 @@ class ModuleSeeder extends Seeder
         $superAdmin = Role::query()->where('slug', UserRole::SuperAdmin->value)->first();
         $ccm = Role::query()->where('slug', 'chief_committee_member')->first();
         $vccm = Role::query()->where('slug', 'vice_chief_committee_member')->first();
-        $mainMember = Role::query()->where('slug', MembershipRole::MainMember->value)->first();
-
         if ($superAdmin) {
             $superAdmin->modules()->sync([
                 $usersModule->id => $fullAccess,
@@ -81,12 +78,6 @@ class ModuleSeeder extends Seeder
         if ($vccm) {
             $vccm->modules()->syncWithoutDetaching([
                 $usersModule->id => $fullAccess,
-                $membersModule->id => $fullAccess,
-            ]);
-        }
-
-        if ($mainMember) {
-            $mainMember->modules()->syncWithoutDetaching([
                 $membersModule->id => $fullAccess,
             ]);
         }

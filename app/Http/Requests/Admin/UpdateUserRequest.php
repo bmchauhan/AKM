@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\CommitteeRole;
 use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
@@ -26,6 +27,13 @@ class UpdateUserRequest extends FormRequest
     public function rules(): array
     {
         $userId = session(AdminUserService::SESSION_EDITING_USER);
+        $actor = $this->user();
+        $allowedMembership = $actor
+            ? app(AdminUserService::class)->allowedMembershipTypesForUserForm($actor)
+            : [];
+        $allowedCommittee = $actor
+            ? app(AdminUserService::class)->allowedCommitteeRolesForUserForm($actor)
+            : [];
 
         return [
             'first_name' => ['required', 'string', 'max:100'],
@@ -40,11 +48,23 @@ class UpdateUserRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'username' => ['required', 'string', 'max:50', 'regex:/^[a-zA-Z0-9._-]+$/', Rule::unique('users', 'username')->ignore($userId)],
             'password' => ['nullable', 'confirmed', Password::defaults()],
-            'role' => [
+            'membership_type' => [
                 'required',
                 'string',
-                Rule::exists('roles', 'slug'),
+                Rule::in($allowedMembership),
                 Rule::notIn([MembershipRole::FamilyMember->value]),
+            ],
+            'committee_role' => [
+                'nullable',
+                'string',
+                Rule::when(
+                    filled($this->input('committee_role')),
+                    [
+                        Rule::in($allowedCommittee),
+                        Rule::enum(CommitteeRole::class),
+                    ],
+                ),
+                Rule::prohibitedIf(fn () => $this->input('membership_type') === MembershipRole::RentalMember->value),
             ],
             'id_proof' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:1024'],
             'profile_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],

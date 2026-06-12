@@ -15,6 +15,7 @@
                 'membershipTypes' => $membershipTypes,
                 'defaultMainMemberId' => $defaultMainMemberId,
                 'canPickMainMember' => $canPickMainMember,
+                'canChooseHouseholdScope' => $canChooseHouseholdScope,
             ])
 
             <div class="mt-8 flex flex-wrap gap-3 border-t border-[#E6EBF4] pt-6">

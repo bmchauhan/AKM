@@ -6,6 +6,8 @@ use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
 use App\Models\User;
+use Faker\Factory as FakerFactory;
+use Faker\Generator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -14,6 +16,10 @@ class DemoDataSeeder extends Seeder
     private const DEMO_PASSWORD = '12345678';
 
     private const DEMO_EMAIL_DOMAIN = 'demo.akmyug.local';
+
+    private const FAKER_SEED = 20260608;
+
+    private ?Generator $faker = null;
 
     /**
      * @var array<string, bool>
@@ -36,6 +42,7 @@ class DemoDataSeeder extends Seeder
     {
         $passwordHash = Hash::make(self::DEMO_PASSWORD);
         $now = now();
+        $this->faker();
         $this->loadExistingUniques();
 
         $hasDemoUsers = User::query()
@@ -49,7 +56,7 @@ class DemoDataSeeder extends Seeder
         }
 
         $familyCount = User::query()
-            ->where('role', MembershipRole::FamilyMember->value)
+            ->where('membership_type', MembershipRole::FamilyMember->value)
             ->where('email', 'like', '%@'.self::DEMO_EMAIL_DOMAIN)
             ->count();
 
@@ -88,7 +95,7 @@ class DemoDataSeeder extends Seeder
     private function seedFamilyMembers(string $passwordHash, \Illuminate\Support\Carbon $now): void
     {
         $mainMembers = User::query()
-            ->where('role', MembershipRole::MainMember->value)
+            ->where('membership_type', MembershipRole::MainMember->value)
             ->where('email', 'like', '%@'.self::DEMO_EMAIL_DOMAIN)
             ->orderBy('id')
             ->get();
@@ -132,17 +139,17 @@ class DemoDataSeeder extends Seeder
     private function committeeMemberDefinitions(): array
     {
         $definitions = [
-            ['first_name' => 'Narendra', 'middle_name' => 'Kumar', 'last_name' => 'Shah', 'role' => 'chief_committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '901', 'caste' => 'Shah'],
-            ['first_name' => 'Pravin', 'middle_name' => 'Ramesh', 'last_name' => 'Patel', 'role' => 'vice_chief_committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '902', 'caste' => 'Patel'],
-            ['first_name' => 'Hitesh', 'middle_name' => 'Jayant', 'last_name' => 'Mehta', 'role' => 'finance_committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '903', 'caste' => 'Mehta'],
-            ['first_name' => 'Kiran', 'middle_name' => 'Mahendra', 'last_name' => 'Desai', 'role' => 'committee_member', 'gender' => Gender::Female, 'house_type' => HouseType::A, 'house_number' => '904', 'caste' => 'Desai'],
-            ['first_name' => 'Ashok', 'middle_name' => 'Bhupendra', 'last_name' => 'Gandhi', 'role' => 'committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '905', 'caste' => 'Gandhi'],
-            ['first_name' => 'Meena', 'middle_name' => 'Suresh', 'last_name' => 'Joshi', 'role' => 'committee_member', 'gender' => Gender::Female, 'house_type' => HouseType::A, 'house_number' => '906', 'caste' => 'Joshi'],
-            ['first_name' => 'Rakesh', 'middle_name' => 'Vinod', 'last_name' => 'Trivedi', 'role' => 'committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '907', 'caste' => 'Trivedi'],
-            ['first_name' => 'Sunita', 'middle_name' => 'Harshad', 'last_name' => 'Pandya', 'role' => 'committee_member', 'gender' => Gender::Female, 'house_type' => HouseType::A, 'house_number' => '908', 'caste' => 'Pandya'],
-            ['first_name' => 'Dilip', 'middle_name' => 'Chandrakant', 'last_name' => 'Modi', 'role' => 'committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '909', 'caste' => 'Modi'],
-            ['first_name' => 'Rekha', 'middle_name' => 'Arvind', 'last_name' => 'Vyas', 'role' => 'committee_member', 'gender' => Gender::Female, 'house_type' => HouseType::A, 'house_number' => '910', 'caste' => 'Vyas'],
-            ['first_name' => 'Sanjay', 'middle_name' => 'Mukesh', 'last_name' => 'Thakkar', 'role' => 'committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '911', 'caste' => 'Thakkar'],
+            ['first_name' => 'Narendra', 'middle_name' => 'Kumar', 'last_name' => 'Shah', 'committee_role' => 'chief_committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '901', 'caste' => 'Shah'],
+            ['first_name' => 'Pravin', 'middle_name' => 'Ramesh', 'last_name' => 'Patel', 'committee_role' => 'vice_chief_committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '902', 'caste' => 'Patel'],
+            ['first_name' => 'Hitesh', 'middle_name' => 'Jayant', 'last_name' => 'Mehta', 'committee_role' => 'finance_committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '903', 'caste' => 'Mehta'],
+            ['first_name' => 'Kiran', 'middle_name' => 'Mahendra', 'last_name' => 'Desai', 'committee_role' => 'committee_member', 'gender' => Gender::Female, 'house_type' => HouseType::A, 'house_number' => '904', 'caste' => 'Desai'],
+            ['first_name' => 'Ashok', 'middle_name' => 'Bhupendra', 'last_name' => 'Gandhi', 'committee_role' => 'committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '905', 'caste' => 'Gandhi'],
+            ['first_name' => 'Meena', 'middle_name' => 'Suresh', 'last_name' => 'Joshi', 'committee_role' => 'committee_member', 'gender' => Gender::Female, 'house_type' => HouseType::A, 'house_number' => '906', 'caste' => 'Joshi'],
+            ['first_name' => 'Rakesh', 'middle_name' => 'Vinod', 'last_name' => 'Trivedi', 'committee_role' => 'committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '907', 'caste' => 'Trivedi'],
+            ['first_name' => 'Sunita', 'middle_name' => 'Harshad', 'last_name' => 'Pandya', 'committee_role' => 'committee_member', 'gender' => Gender::Female, 'house_type' => HouseType::A, 'house_number' => '908', 'caste' => 'Pandya'],
+            ['first_name' => 'Dilip', 'middle_name' => 'Chandrakant', 'last_name' => 'Modi', 'committee_role' => 'committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '909', 'caste' => 'Modi'],
+            ['first_name' => 'Rekha', 'middle_name' => 'Arvind', 'last_name' => 'Vyas', 'committee_role' => 'committee_member', 'gender' => Gender::Female, 'house_type' => HouseType::A, 'house_number' => '910', 'caste' => 'Vyas'],
+            ['first_name' => 'Sanjay', 'middle_name' => 'Mukesh', 'last_name' => 'Thakkar', 'committee_role' => 'committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '911', 'caste' => 'Thakkar'],
         ];
 
         return array_map(fn (array $row) => $this->enrichDefinition($row), $definitions);
@@ -153,51 +160,21 @@ class DemoDataSeeder extends Seeder
      */
     private function mainMemberDefinitions(): array
     {
-        $firstNamesMale = [
-            'Rajesh', 'Amit', 'Vijay', 'Sanjay', 'Ramesh', 'Mahesh', 'Harshad', 'Ketan', 'Bhavin', 'Chirag',
-            'Dharmesh', 'Gaurang', 'Hiren', 'Jignesh', 'Kunal', 'Mitesh', 'Nilesh', 'Parth', 'Rahul', 'Sagar',
-            'Tushar', 'Umesh', 'Vishal', 'Yogesh', 'Alpesh', 'Bharat', 'Chetan', 'Deepak', 'Eknath', 'Faruk',
-        ];
-
-        $firstNamesFemale = [
-            'Priya', 'Neha', 'Kavita', 'Anjali', 'Pooja', 'Nisha', 'Divya', 'Hetal', 'Jyoti', 'Kinjal',
-            'Lata', 'Manisha', 'Nayana', 'Ojasvi', 'Payal', 'Rina', 'Sejal', 'Trupti', 'Urvashi', 'Vidhi',
-            'Asha', 'Bhavna', 'Chandni', 'Disha', 'Esha', 'Falguni', 'Gita', 'Heena', 'Isha', 'Janki',
-        ];
-
-        $middleNames = [
-            'Kumar', 'Ramesh', 'Suresh', 'Mahendra', 'Jayant', 'Bhupendra', 'Chandrakant', 'Harshad', 'Vinod', 'Arvind',
-            'Mukesh', 'Prakash', 'Naresh', 'Dinesh', 'Ashwin', 'Bharat', 'Chiman', 'Dilip', 'Gopal', 'Haresh',
-        ];
-
-        $lastNames = [
-            'Shah', 'Patel', 'Mehta', 'Desai', 'Gandhi', 'Joshi', 'Trivedi', 'Pandya', 'Modi', 'Vyas',
-            'Thakkar', 'Dave', 'Shukla', 'Raval', 'Soni', 'Chauhan', 'Solanki', 'Parmar', 'Rathod', 'Makwana',
-        ];
-
-        $castes = ['Patel', 'Shah', 'Mehta', 'Desai', 'Brahmin', 'Leuva Patel', 'Kadva Patel', 'Lohana', 'Vaniya', 'Rajput'];
-
         $definitions = [];
-        $sequence = 0;
 
         foreach ($this->houseSlots() as $slot) {
-            $isFemale = ($sequence % 3) === 1;
-            $firstName = $isFemale
-                ? $firstNamesFemale[$sequence % count($firstNamesFemale)]
-                : $firstNamesMale[$sequence % count($firstNamesMale)];
+            $gender = $this->faker()->boolean(34) ? Gender::Female : Gender::Male;
+            $names = $this->fakePersonNames($gender);
 
             $definitions[] = $this->enrichDefinition([
-                'first_name' => $firstName,
-                'middle_name' => $middleNames[$sequence % count($middleNames)],
-                'last_name' => $lastNames[intdiv($sequence, 3) % count($lastNames)],
-                'role' => MembershipRole::MainMember->value,
-                'gender' => $isFemale ? Gender::Female : Gender::Male,
+                ...$names,
+                'membership_type' => MembershipRole::MainMember->value,
+                'committee_role' => null,
+                'gender' => $gender,
                 'house_type' => $slot['house_type'],
                 'house_number' => $slot['house_number'],
-                'caste' => $castes[$sequence % count($castes)],
+                'caste' => $this->fakeCaste(),
             ]);
-
-            $sequence++;
         }
 
         return $definitions;
@@ -232,34 +209,57 @@ class DemoDataSeeder extends Seeder
      */
     private function familyMemberDefinition(User $mainMember, int $index): array
     {
-        $familyFirstNames = [
-            ['first_name' => 'Kiran', 'gender' => Gender::Female],
-            ['first_name' => 'Riya', 'gender' => Gender::Female],
-            ['first_name' => 'Arjun', 'gender' => Gender::Male],
-            ['first_name' => 'Isha', 'gender' => Gender::Female],
-            ['first_name' => 'Dev', 'gender' => Gender::Male],
-            ['first_name' => 'Sneha', 'gender' => Gender::Female],
-            ['first_name' => 'Karan', 'gender' => Gender::Male],
-            ['first_name' => 'Mira', 'gender' => Gender::Female],
-            ['first_name' => 'Rohan', 'gender' => Gender::Male],
-            ['first_name' => 'Tara', 'gender' => Gender::Female],
-            ['first_name' => 'Vivaan', 'gender' => Gender::Male],
-            ['first_name' => 'Anaya', 'gender' => Gender::Female],
-        ];
-
-        $pick = $familyFirstNames[($mainMember->id + $index) % count($familyFirstNames)];
+        $gender = $this->faker()->boolean(48) ? Gender::Female : Gender::Male;
+        $names = $this->fakePersonNames($gender);
 
         return $this->enrichFamilyDefinition([
-            'first_name' => $pick['first_name'],
+            'first_name' => $names['first_name'],
             'middle_name' => $mainMember->first_name,
             'last_name' => $mainMember->last_name,
-            'role' => MembershipRole::FamilyMember->value,
-            'gender' => $pick['gender'],
+            'membership_type' => MembershipRole::FamilyMember->value,
+            'committee_role' => null,
+            'gender' => $gender,
             'house_type' => $mainMember->house_type?->value ?? (string) $mainMember->house_type,
             'house_number' => (string) $mainMember->house_number,
             'caste' => $mainMember->caste,
             'linked_main_member_id' => $mainMember->id,
             'family_index' => $index,
+        ]);
+    }
+
+    private function faker(): Generator
+    {
+        if ($this->faker === null) {
+            $this->faker = FakerFactory::create('en_IN');
+            $this->faker->seed(self::FAKER_SEED);
+        }
+
+        return $this->faker;
+    }
+
+    /**
+     * @return array{first_name: string, middle_name: string, last_name: string}
+     */
+    private function fakePersonNames(Gender $gender): array
+    {
+        $faker = $this->faker();
+
+        $firstName = $gender === Gender::Female
+            ? $faker->firstNameFemale()
+            : $faker->firstNameMale();
+
+        return [
+            'first_name' => $firstName,
+            'middle_name' => $faker->firstName(),
+            'last_name' => $faker->lastName(),
+        ];
+    }
+
+    private function fakeCaste(): string
+    {
+        return $this->faker()->randomElement([
+            'Patel', 'Shah', 'Mehta', 'Desai', 'Brahmin', 'Leuva Patel', 'Kadva Patel',
+            'Lohana', 'Vaniya', 'Rajput', 'Jain', 'Prajapati', 'Thakkar', 'Sonar', 'Koli',
         ]);
     }
 
@@ -340,6 +340,13 @@ class DemoDataSeeder extends Seeder
 
         $fullName = trim(collect([$firstName, $middleName, $lastName])->filter()->implode(' '));
 
+        $committeeRole = $row['committee_role'] ?? null;
+        $membershipType = $row['membership_type'] ?? null;
+
+        if ($membershipType === null && filled($committeeRole)) {
+            $membershipType = MembershipRole::MainMember->value;
+        }
+
         return [
             'name' => $fullName,
             'first_name' => $firstName,
@@ -357,7 +364,9 @@ class DemoDataSeeder extends Seeder
             'email_verified_at' => $now,
             'username' => (string) $row['username'],
             'password' => $passwordHash,
-            'role' => (string) $row['role'],
+            'membership_type' => $membershipType,
+            'committee_role' => $committeeRole,
+            'role' => User::syncLegacyRole($membershipType, $committeeRole),
             'linked_main_member_id' => $row['linked_main_member_id'] ?? null,
             'remember_token' => null,
             'created_at' => $now,

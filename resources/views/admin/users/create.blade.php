@@ -8,7 +8,10 @@
 
         <form method="POST" action="{{ route('admin.users.store') }}" enctype="multipart/form-data" class="rounded-xl border border-[#E6EBF4] bg-white p-4 sm:p-6" autocomplete="off" novalidate>
             @csrf
-            @include('admin.users._form', ['roles' => $roles])
+            @include('admin.users._form', [
+                'membershipTypes' => $membershipTypes,
+                'committeeRoles' => $committeeRoles,
+            ])
 
             <div class="mt-8 flex flex-wrap gap-3 border-t border-[#E6EBF4] pt-6">
                 <x-common.button type="submit">{{ __('messages.users_save') }}</x-common.button>

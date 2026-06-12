@@ -39,7 +39,9 @@ class AdminMemberService
                 'mobile' => $member->mobile_number ?? '—',
                 'house' => $member->houseLabel() ?? '—',
                 'gender' => $member->gender?->label() ?? '—',
-                'membership_type' => $member->roleLabel(),
+                'membership_type' => $member->membership_type
+                    ? MembershipRole::from($member->membership_type)->label().' ('.MembershipRole::from($member->membership_type)->shortForm().')'
+                    : '—',
                 'profile_image_url' => $member->profileImageUrl(),
                 'main_member' => $member->mainMember?->fullName() ?? '—',
             ])
@@ -49,7 +51,7 @@ class AdminMemberService
 
     public function mainMembersForSelect(User $actor): array
     {
-        if ($actor->isMainMember()) {
+        if ($actor->isMainMember() && ! $actor->canManageAnyHousehold()) {
             return [[
                 'value' => $actor->id,
                 'label' => $this->mainMemberSelectLabel($actor),
@@ -84,7 +86,7 @@ class AdminMemberService
 
     public function defaultMainMemberId(User $actor): ?int
     {
-        if ($actor->isMainMember()) {
+        if ($actor->isMainMember() && ! $actor->canManageAnyHousehold()) {
             return $actor->id;
         }
 
@@ -93,12 +95,47 @@ class AdminMemberService
 
     public function canPickMainMember(User $actor): bool
     {
-        return ! $actor->isMainMember();
+        return $actor->canManageAnyHousehold() || ! $actor->isMainMember();
+    }
+
+    public function canChooseHouseholdScope(User $actor): bool
+    {
+        return $actor->canChooseHouseholdScope();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function mainMembersForOthersSelect(User $actor): array
+    {
+        $options = $this->mainMembersForSelect($actor);
+
+        if (! $actor->canChooseHouseholdScope()) {
+            return $options;
+        }
+
+        return array_values(array_filter(
+            $options,
+            fn (array $option) => (int) $option['value'] !== $actor->id,
+        ));
+    }
+
+    public function othersMainMemberId(User $actor, ?int $selectedMainMemberId): ?int
+    {
+        if (! $actor->canChooseHouseholdScope()) {
+            return $selectedMainMemberId;
+        }
+
+        if ($selectedMainMemberId === null || (int) $selectedMainMemberId === $actor->id) {
+            return null;
+        }
+
+        return $selectedMainMemberId;
     }
 
     public function selectedMainMemberId(User $actor): ?int
     {
-        if ($actor->isMainMember()) {
+        if ($actor->isMainMember() && ! $actor->canManageAnyHousehold()) {
             return $actor->id;
         }
 
@@ -109,7 +146,7 @@ class AdminMemberService
 
     public function rememberSelectedMainMember(User $actor, int $mainMemberId): void
     {
-        if ($actor->isMainMember()) {
+        if ($actor->isMainMember() && ! $actor->canManageAnyHousehold()) {
             session([self::SESSION_MAIN_MEMBER => $actor->id]);
 
             return;
@@ -223,7 +260,7 @@ class AdminMemberService
 
     public function resolveListMainMemberId(User $actor, ?int $mainMemberId): ?int
     {
-        if ($actor->isMainMember()) {
+        if ($actor->isMainMember() && ! $actor->canManageAnyHousehold()) {
             return $actor->id;
         }
 
@@ -233,7 +270,7 @@ class AdminMemberService
 
         $mainMember = $this->users->findById($mainMemberId);
 
-        if (! $mainMember || $mainMember->role !== MembershipRole::MainMember->value) {
+        if (! $mainMember?->isMainMember()) {
             return null;
         }
 
@@ -242,13 +279,13 @@ class AdminMemberService
 
     private function resolveMainMember(User $actor, int $mainMemberId, ?User $existingMember = null): User
     {
-        if ($actor->isMainMember()) {
+        if ($actor->isMainMember() && ! $actor->canManageAnyHousehold()) {
             return $actor;
         }
 
         $mainMember = $this->users->findById($mainMemberId);
 
-        if (! $mainMember || $mainMember->role !== MembershipRole::MainMember->value) {
+        if (! $mainMember?->isMainMember()) {
             throw ValidationException::withMessages([
                 'linked_main_member_id' => [__('messages.members_main_member_required')],
             ]);
@@ -280,7 +317,9 @@ class AdminMemberService
             'alternate_number' => filled($data['alternate_number'] ?? null) ? trim($data['alternate_number']) : null,
             'email' => trim($data['email']),
             'username' => trim($data['username']),
-            'role' => $this->resolveMembershipRole($data),
+            'membership_type' => $membershipType = $this->resolveMembershipRole($data),
+            'committee_role' => null,
+            'role' => User::syncLegacyRole($membershipType, null),
             'linked_main_member_id' => $mainMember->id,
         ];
 

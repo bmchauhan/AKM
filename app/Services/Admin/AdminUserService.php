@@ -2,6 +2,7 @@
 
 namespace App\Services\Admin;
 
+use App\Enums\CommitteeRole;
 use App\Enums\MembershipRole;
 use App\Enums\UserRole;
 use App\Models\Role;
@@ -89,16 +90,38 @@ class AdminUserService
      */
     public function rolesForFilter(User $actor): array
     {
-        return Role::query()
-            ->when(! $actor->isSuperAdmin(), function ($query) {
-                $query->where('slug', '!=', UserRole::SuperAdmin->value);
-            })
+        $options = collect(MembershipRole::cases())
+            ->map(fn (MembershipRole $type) => [
+                'value' => $type->value,
+                'label' => $type->label().' ('.$type->shortForm().')',
+            ]);
+
+        $committeeOptions = Role::query()
+            ->whereIn('slug', array_map(fn (CommitteeRole $role) => $role->value, CommitteeRole::cases()))
             ->orderBy('name')
             ->get(['slug', 'name', 'short_form'])
             ->map(fn (Role $role) => [
                 'value' => $role->slug,
                 'label' => $role->name.' ('.$role->short_form.')',
-            ])
+            ]);
+
+        if ($actor->isSuperAdmin()) {
+            $superAdmin = Role::query()
+                ->where('slug', UserRole::SuperAdmin->value)
+                ->first(['slug', 'name', 'short_form']);
+
+            if ($superAdmin) {
+                $committeeOptions->prepend([
+                    'value' => $superAdmin->slug,
+                    'label' => $superAdmin->name.' ('.$superAdmin->short_form.')',
+                ]);
+            }
+        }
+
+        return $options
+            ->concat($committeeOptions)
+            ->sortBy('label')
+            ->values()
             ->all();
     }
 
@@ -138,19 +161,44 @@ class AdminUserService
         ];
     }
 
-    public function rolesForSelect(User $actor): array
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    public function membershipTypesForSelect(User $actor): array
     {
-        $allowedSlugs = $this->allowedRoleSlugsForUserForm($actor);
-
-        return Role::query()
-            ->orderBy('name')
-            ->whereIn('slug', $allowedSlugs)
-            ->get(['slug', 'name', 'short_form'])
-            ->map(fn (Role $role) => [
-                'value' => $role->slug,
-                'label' => $role->name.' ('.$role->short_form.')',
+        return collect($this->allowedMembershipTypesForUserForm($actor))
+            ->map(fn (string $slug) => MembershipRole::from($slug))
+            ->map(fn (MembershipRole $type) => [
+                'value' => $type->value,
+                'label' => $type->label().' ('.$type->shortForm().')',
             ])
+            ->values()
             ->all();
+    }
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    public function committeeRolesForSelect(User $actor): array
+    {
+        if (! $actor->isSuperAdmin()) {
+            return [];
+        }
+
+        $options = [['value' => '', 'label' => __('messages.users_committee_none')]];
+
+        foreach ($this->allowedCommitteeRolesForUserForm($actor) as $slug) {
+            $role = Role::query()->where('slug', $slug)->first(['slug', 'name', 'short_form']);
+
+            $options[] = [
+                'value' => $slug,
+                'label' => $role
+                    ? $role->name.' ('.$role->short_form.')'
+                    : CommitteeRole::from($slug)->label().' ('.CommitteeRole::from($slug)->shortForm().')',
+            ];
+        }
+
+        return $options;
     }
 
     public function assertCanManage(User $actor, User $target, string $action = 'update'): void
@@ -160,7 +208,8 @@ class AdminUserService
 
     public function create(User $actor, array $data, ?UploadedFile $idProof, ?UploadedFile $profileImage): User
     {
-        $this->assertAssignableRole($actor, $data['role']);
+        $this->assertAssignableMembership($actor, $data['membership_type']);
+        $this->assertAssignableCommittee($actor, $data['membership_type'], $data['committee_role'] ?? null);
 
         $payload = $this->buildPayload($data);
 
@@ -178,7 +227,13 @@ class AdminUserService
     public function update(User $actor, User $user, array $data, ?UploadedFile $idProof, ?UploadedFile $profileImage): User
     {
         $this->assertCanManage($actor, $user);
-        $this->assertAssignableRole($actor, $data['role']);
+        $this->assertAssignableMembership($actor, $data['membership_type']);
+
+        if (! $actor->isSuperAdmin()) {
+            $data['committee_role'] = $user->committee_role;
+        }
+
+        $this->assertAssignableCommittee($actor, $data['membership_type'], $data['committee_role'] ?? null);
 
         $payload = $this->buildPayload($data, $user);
 
@@ -226,6 +281,12 @@ class AdminUserService
         $firstName = trim($data['first_name']);
         $middleName = filled($data['middle_name'] ?? null) ? trim($data['middle_name']) : null;
         $lastName = trim($data['last_name']);
+        $membershipType = $data['membership_type'];
+        $committeeRole = filled($data['committee_role'] ?? null) ? $data['committee_role'] : null;
+
+        if ($membershipType === MembershipRole::RentalMember->value) {
+            $committeeRole = null;
+        }
 
         $payload = [
             'first_name' => $firstName,
@@ -240,7 +301,9 @@ class AdminUserService
             'alternate_number' => filled($data['alternate_number'] ?? null) ? trim($data['alternate_number']) : null,
             'email' => trim($data['email']),
             'username' => trim($data['username']),
-            'role' => $data['role'],
+            'membership_type' => $membershipType,
+            'committee_role' => $committeeRole,
+            'role' => User::syncLegacyRole($membershipType, $committeeRole),
         ];
 
         if (filled($data['password'] ?? null)) {
@@ -252,23 +315,42 @@ class AdminUserService
         return $payload;
     }
 
-    private function assertAssignableRole(User $actor, string $roleSlug): void
+    private function assertAssignableMembership(User $actor, string $membershipType): void
     {
-        if ($roleSlug === UserRole::SuperAdmin->value && ! $actor->isSuperAdmin()) {
+        if ($membershipType === MembershipRole::FamilyMember->value) {
             throw ValidationException::withMessages([
-                'role' => [__('messages.users_role_super_admin_forbidden')],
+                'membership_type' => [__('messages.users_role_family_member_forbidden')],
             ]);
         }
 
-        if ($roleSlug === MembershipRole::FamilyMember->value) {
+        if (! in_array($membershipType, $this->allowedMembershipTypesForUserForm($actor), true)) {
             throw ValidationException::withMessages([
-                'role' => [__('messages.users_role_family_member_forbidden')],
+                'membership_type' => [__('messages.users_membership_not_allowed')],
+            ]);
+        }
+    }
+
+    private function assertAssignableCommittee(User $actor, string $membershipType, ?string $committeeRole): void
+    {
+        if ($membershipType === MembershipRole::RentalMember->value && filled($committeeRole)) {
+            throw ValidationException::withMessages([
+                'committee_role' => [__('messages.users_committee_rental_forbidden')],
             ]);
         }
 
-        if (! in_array($roleSlug, $this->allowedRoleSlugsForUserForm($actor), true)) {
+        if (! filled($committeeRole)) {
+            return;
+        }
+
+        if (! $actor->isSuperAdmin()) {
             throw ValidationException::withMessages([
-                'role' => [__('messages.users_role_not_allowed')],
+                'committee_role' => [__('messages.users_committee_not_allowed')],
+            ]);
+        }
+
+        if (! in_array($committeeRole, $this->allowedCommitteeRolesForUserForm($actor), true)) {
+            throw ValidationException::withMessages([
+                'committee_role' => [__('messages.users_committee_not_allowed')],
             ]);
         }
     }
@@ -276,30 +358,33 @@ class AdminUserService
     /**
      * @return list<string>
      */
-    private function allowedRoleSlugsForUserForm(User $actor): array
+    public function allowedMembershipTypesForUserForm(User $actor): array
     {
-        if ($actor->isSuperAdmin()) {
-            return Role::query()
-                ->where('slug', '!=', MembershipRole::FamilyMember->value)
-                ->orderBy('name')
-                ->pluck('slug')
-                ->all();
-        }
-
-        if ($actor->hasCommitteeLeadership()) {
+        if ($actor->isSuperAdmin() || $actor->hasCommitteeLeadership()) {
             return [
                 MembershipRole::MainMember->value,
                 MembershipRole::RentalMember->value,
             ];
         }
 
-        return Role::query()
-            ->whereNotIn('slug', [
-                UserRole::SuperAdmin->value,
-                MembershipRole::FamilyMember->value,
-            ])
-            ->orderBy('name')
-            ->pluck('slug')
-            ->all();
+        return [
+            MembershipRole::MainMember->value,
+            MembershipRole::RentalMember->value,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function allowedCommitteeRolesForUserForm(User $actor): array
+    {
+        if (! $actor->isSuperAdmin()) {
+            return [];
+        }
+
+        return array_map(
+            fn (CommitteeRole $role) => $role->value,
+            CommitteeRole::cases(),
+        );
     }
 }

@@ -26,8 +26,13 @@ class UpdateMemberRequest extends FormRequest
     public function rules(): array
     {
         $memberId = session(AdminMemberService::SESSION_EDITING_MEMBER);
+        $user = $this->user();
 
         return [
+            'household_scope' => [
+                Rule::requiredIf(fn () => $user?->canChooseHouseholdScope() ?? false),
+                Rule::in(['self', 'others']),
+            ],
             'membership_type' => [
                 'required',
                 'string',
@@ -37,7 +42,7 @@ class UpdateMemberRequest extends FormRequest
                 ]),
             ],
             'linked_main_member_id' => [
-                Rule::requiredIf(fn () => ! $this->user()?->isMainMember()),
+                Rule::requiredIf(fn () => $this->requiresMainMemberSelection()),
                 'integer',
                 'exists:users,id',
             ],
@@ -65,10 +70,37 @@ class UpdateMemberRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if ($this->user()?->isMainMember()) {
+        $user = $this->user();
+
+        if ($user?->canChooseHouseholdScope()) {
+            if ($this->input('household_scope', 'self') === 'self') {
+                $this->merge([
+                    'linked_main_member_id' => $user->id,
+                ]);
+            }
+
+            return;
+        }
+
+        if ($user?->isMainMember() && ! $user->canManageAnyHousehold()) {
             $this->merge([
-                'linked_main_member_id' => $this->user()->id,
+                'linked_main_member_id' => $user->id,
             ]);
         }
+    }
+
+    private function requiresMainMemberSelection(): bool
+    {
+        $user = $this->user();
+
+        if (! $user) {
+            return true;
+        }
+
+        if ($user->canChooseHouseholdScope()) {
+            return $this->input('household_scope') === 'others';
+        }
+
+        return $user->canManageAnyHousehold() || ! $user->isMainMember();
     }
 }

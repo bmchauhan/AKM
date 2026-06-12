@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AdminModule;
+use App\Enums\CommitteeRole;
 use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
@@ -42,6 +43,8 @@ class User extends Authenticatable
         'username',
         'password',
         'role',
+        'membership_type',
+        'committee_role',
         'linked_main_member_id',
     ];
 
@@ -69,6 +72,11 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class, 'role', 'slug');
     }
 
+    public function committeeRoleRecord(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'committee_role', 'slug');
+    }
+
     public function mainMember(): BelongsTo
     {
         return $this->belongsTo(self::class, 'linked_main_member_id');
@@ -82,7 +90,7 @@ class User extends Authenticatable
     public function householdMembers(): HasMany
     {
         return $this->hasMany(self::class, 'linked_main_member_id')
-            ->whereIn('role', [
+            ->whereIn('membership_type', [
                 MembershipRole::FamilyMember->value,
                 MembershipRole::RentalMember->value,
             ]);
@@ -90,8 +98,31 @@ class User extends Authenticatable
 
     public function roleLabel(): string
     {
-        return $this->roleRecord?->name
-            ?? ucwords(str_replace('_', ' ', (string) $this->role));
+        if ($this->isSuperAdmin()) {
+            return $this->roleRecord?->name ?? 'Super Admin';
+        }
+
+        $parts = [];
+
+        if (filled($this->membership_type)) {
+            $parts[] = MembershipRole::from($this->membership_type)->shortForm();
+        }
+
+        if (filled($this->committee_role)) {
+            $parts[] = $this->committeeRoleRecord?->short_form
+                ?? CommitteeRole::from($this->committee_role)->shortForm();
+        }
+
+        return $parts !== [] ? implode(' · ', $parts) : '—';
+    }
+
+    public static function syncLegacyRole(?string $membershipType, ?string $committeeRole, bool $isSuperAdmin = false): string
+    {
+        if ($isSuperAdmin) {
+            return UserRole::SuperAdmin->value;
+        }
+
+        return $committeeRole ?? $membershipType ?? 'member';
     }
 
     public function fullName(): string
@@ -131,14 +162,19 @@ class User extends Authenticatable
         return $this->role === UserRole::SuperAdmin->value;
     }
 
+    public function hasCommitteeRole(): bool
+    {
+        return filled($this->committee_role);
+    }
+
     public function isChiefCommitteeMember(): bool
     {
-        return $this->role === 'chief_committee_member';
+        return $this->committee_role === CommitteeRole::ChiefCommitteeMember->value;
     }
 
     public function isViceChiefCommitteeMember(): bool
     {
-        return $this->role === 'vice_chief_committee_member';
+        return $this->committee_role === CommitteeRole::ViceChiefCommitteeMember->value;
     }
 
     public function hasCommitteeLeadership(): bool
@@ -148,12 +184,43 @@ class User extends Authenticatable
 
     public function isMainMember(): bool
     {
-        return $this->role === MembershipRole::MainMember->value;
+        return $this->membership_type === MembershipRole::MainMember->value;
     }
 
     public function isFamilyMember(): bool
     {
-        return $this->role === MembershipRole::FamilyMember->value;
+        return $this->membership_type === MembershipRole::FamilyMember->value;
+    }
+
+    public function isRentalMember(): bool
+    {
+        return $this->membership_type === MembershipRole::RentalMember->value;
+    }
+
+    /**
+     * Committee (or SA) users who may add/edit household members for any main member — not only their own.
+     * Requires committee Users create or update (pivot), so MM+committee still needs explicit Users access.
+     */
+    public function canChooseHouseholdScope(): bool
+    {
+        return $this->isMainMember() && $this->canManageAnyHousehold();
+    }
+
+    public function canManageAnyHousehold(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if (! $this->hasCommitteeRole()) {
+            return false;
+        }
+
+        $permissions = app(ModulePermissionService::class);
+        $committeeRole = (string) $this->committee_role;
+
+        return $permissions->roleCanOnModule($committeeRole, AdminModule::Users->value, ModulePermissionAction::Create)
+            || $permissions->roleCanOnModule($committeeRole, AdminModule::Users->value, ModulePermissionAction::Update);
     }
 
     /**
@@ -170,11 +237,19 @@ class User extends Authenticatable
             ? $action
             : ModulePermissionAction::from($action);
 
-        return app(ModulePermissionService::class)->roleCanOnModule(
-            (string) $this->role,
-            $moduleKey,
-            $permissionAction,
-        );
+        if ($moduleKey === AdminModule::Members->value && $this->isMainMember()) {
+            return true;
+        }
+
+        if ($this->hasCommitteeRole()) {
+            return app(ModulePermissionService::class)->roleCanOnModule(
+                (string) $this->committee_role,
+                $moduleKey,
+                $permissionAction,
+            );
+        }
+
+        return false;
     }
 
     public function canAccessAdminModule(AdminModule|string $module): bool
@@ -207,7 +282,7 @@ class User extends Authenticatable
     /** @see Gate ability `members.manage` */
     public function canManageMember(self $target, ModulePermissionAction|string $action = 'update'): bool
     {
-        if (! in_array($target->role, [
+        if (! in_array($target->membership_type, [
             MembershipRole::FamilyMember->value,
             MembershipRole::RentalMember->value,
         ], true)) {
@@ -218,7 +293,7 @@ class User extends Authenticatable
             return false;
         }
 
-        if ($this->isMainMember()) {
+        if ($this->isMainMember() && ! $this->canManageAnyHousehold()) {
             return (int) $target->linked_main_member_id === $this->id;
         }
 

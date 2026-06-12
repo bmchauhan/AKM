@@ -46,27 +46,6 @@ class RoleSeeder extends Seeder
                 'description' => 'General management committee member.',
                 'is_system' => false,
             ],
-            [
-                'name' => 'Main Member',
-                'short_form' => 'MM',
-                'slug' => 'main_member',
-                'description' => 'Primary registered society member.',
-                'is_system' => false,
-            ],
-            [
-                'name' => 'Family Member',
-                'short_form' => 'FM',
-                'slug' => 'family_member',
-                'description' => 'Family member linked to a main member household.',
-                'is_system' => false,
-            ],
-            [
-                'name' => 'Rental Member',
-                'short_form' => 'RM',
-                'slug' => 'rental_member',
-                'description' => 'Tenant or rental resident of the society.',
-                'is_system' => false,
-            ],
         ];
 
         foreach ($roles as $role) {

@@ -35,7 +35,13 @@ class UserRepository implements UserRepositoryInterface
                 $query->where('role', '!=', UserRole::SuperAdmin->value);
             })
             ->when(filled($filters['role'] ?? null), function ($query) use ($filters) {
-                $query->where('role', $filters['role']);
+                $slug = $filters['role'];
+
+                $query->where(function ($inner) use ($slug) {
+                    $inner->where('membership_type', $slug)
+                        ->orWhere('committee_role', $slug)
+                        ->orWhere('role', $slug);
+                });
             })
             ->when(filled($filters['house_type'] ?? null), function ($query) use ($filters) {
                 $query->where('house_type', $filters['house_type']);
@@ -107,7 +113,7 @@ class UserRepository implements UserRepositoryInterface
     {
         return User::query()
             ->with('mainMember')
-            ->whereIn('role', [
+            ->whereIn('membership_type', [
                 MembershipRole::FamilyMember->value,
                 MembershipRole::RentalMember->value,
             ])
@@ -120,7 +126,7 @@ class UserRepository implements UserRepositoryInterface
     public function mainMembersForSelect(): Collection
     {
         return User::query()
-            ->where('role', MembershipRole::MainMember->value)
+            ->where('membership_type', MembershipRole::MainMember->value)
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->get(['id', 'first_name', 'middle_name', 'last_name', 'house_type', 'house_number']);
