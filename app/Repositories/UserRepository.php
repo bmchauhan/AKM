@@ -3,19 +3,58 @@
 namespace App\Repositories;
 
 use App\Enums\MembershipRole;
+use App\Enums\UserRole;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class UserRepository implements UserRepositoryInterface
 {
-    public function allForAdmin(): Collection
+    public function paginatedForAdmin(array $filters = [], int $perPage = 25): LengthAwarePaginator
     {
+        return $this->adminListQuery($filters)
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * @param  array{house_type?: string, house_number?: string, name?: string, role?: string, exclude_super_admin?: bool}  $filters
+     */
+    private function adminListQuery(array $filters): Builder
+    {
+        $name = trim((string) ($filters['name'] ?? ''));
+
         return User::query()
             ->with('roleRecord')
+            ->withCount([
+                'householdMembers as household_members_count',
+            ])
+            ->when(! empty($filters['exclude_super_admin']), function ($query) {
+                $query->where('role', '!=', UserRole::SuperAdmin->value);
+            })
+            ->when(filled($filters['role'] ?? null), function ($query) use ($filters) {
+                $query->where('role', $filters['role']);
+            })
+            ->when(filled($filters['house_type'] ?? null), function ($query) use ($filters) {
+                $query->where('house_type', $filters['house_type']);
+            })
+            ->when(filled($filters['house_number'] ?? null), function ($query) use ($filters) {
+                $query->where('house_number', trim((string) $filters['house_number']));
+            })
+            ->when($name !== '', function ($query) use ($name) {
+                $term = '%'.$name.'%';
+
+                $query->where(function ($inner) use ($term) {
+                    $inner->where('first_name', 'like', $term)
+                        ->orWhere('middle_name', 'like', $term)
+                        ->orWhere('last_name', 'like', $term)
+                        ->orWhere('name', 'like', $term);
+                });
+            })
             ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->get();
+            ->orderBy('last_name');
     }
 
     public function findById(int $id): ?User

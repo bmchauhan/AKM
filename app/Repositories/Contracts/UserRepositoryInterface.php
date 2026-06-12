@@ -3,11 +3,15 @@
 namespace App\Repositories\Contracts;
 
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface UserRepositoryInterface
 {
-    public function allForAdmin(): Collection;
+    /**
+     * @param  array{house_type?: string, house_number?: string, name?: string, role?: string, exclude_super_admin?: bool}  $filters
+     */
+    public function paginatedForAdmin(array $filters = [], int $perPage = 25): LengthAwarePaginator;
 
     public function findById(int $id): ?User;
 

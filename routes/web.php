@@ -36,6 +36,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+        Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::get('/reset-password', [PasswordController::class, 'edit'])->name('password.edit');
         Route::put('/reset-password', [PasswordController::class, 'update'])->name('password.update');
 
@@ -49,13 +50,19 @@ Route::middleware('auth')->group(function () {
             Route::post('/', [UserController::class, 'store'])
                 ->middleware('admin.module:users,create')
                 ->name('store');
-            Route::get('/{user}/edit', [UserController::class, 'edit'])
+            Route::post('/household-members', [UserController::class, 'householdMembers'])
+                ->middleware('admin.module:users,read')
+                ->name('household-members');
+            Route::post('/open-edit', [UserController::class, 'openEdit'])
+                ->middleware('admin.module:users,update')
+                ->name('open-edit');
+            Route::get('/edit', [UserController::class, 'edit'])
                 ->middleware('admin.module:users,update')
                 ->name('edit');
-            Route::put('/{user}', [UserController::class, 'update'])
+            Route::put('/edit', [UserController::class, 'update'])
                 ->middleware('admin.module:users,update')
                 ->name('update');
-            Route::delete('/{user}', [UserController::class, 'destroy'])
+            Route::delete('/', [UserController::class, 'destroy'])
                 ->middleware('admin.module:users,delete')
                 ->name('destroy');
         });
@@ -64,19 +71,25 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [MemberController::class, 'index'])
                 ->middleware('admin.module:members,read')
                 ->name('index');
+            Route::post('/select-household', [MemberController::class, 'selectHousehold'])
+                ->middleware('admin.module:members,read')
+                ->name('select-household');
             Route::get('/create', [MemberController::class, 'create'])
                 ->middleware('admin.module:members,create')
                 ->name('create');
             Route::post('/', [MemberController::class, 'store'])
                 ->middleware('admin.module:members,create')
                 ->name('store');
-            Route::get('/{member}/edit', [MemberController::class, 'edit'])
+            Route::post('/open-edit', [MemberController::class, 'openEdit'])
+                ->middleware('admin.module:members,update')
+                ->name('open-edit');
+            Route::get('/edit', [MemberController::class, 'edit'])
                 ->middleware('admin.module:members,update')
                 ->name('edit');
-            Route::put('/{member}', [MemberController::class, 'update'])
+            Route::put('/edit', [MemberController::class, 'update'])
                 ->middleware('admin.module:members,update')
                 ->name('update');
-            Route::delete('/{member}', [MemberController::class, 'destroy'])
+            Route::delete('/', [MemberController::class, 'destroy'])
                 ->middleware('admin.module:members,delete')
                 ->name('destroy');
         });

@@ -79,6 +79,15 @@ class User extends Authenticatable
         return $this->hasMany(self::class, 'linked_main_member_id');
     }
 
+    public function householdMembers(): HasMany
+    {
+        return $this->hasMany(self::class, 'linked_main_member_id')
+            ->whereIn('role', [
+                MembershipRole::FamilyMember->value,
+                MembershipRole::RentalMember->value,
+            ]);
+    }
+
     public function roleLabel(): string
     {
         return $this->roleRecord?->name

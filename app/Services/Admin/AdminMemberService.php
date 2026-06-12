@@ -16,6 +16,10 @@ class AdminMemberService
 {
     use HandlesUploads;
 
+    public const SESSION_MAIN_MEMBER = 'admin.members.main_member_id';
+
+    public const SESSION_EDITING_MEMBER = 'admin.members.editing_member_id';
+
     public function __construct(
         private readonly UserRepositoryInterface $users,
     ) {}
@@ -48,7 +52,7 @@ class AdminMemberService
         if ($actor->isMainMember()) {
             return [[
                 'value' => $actor->id,
-                'label' => $actor->fullName(),
+                'label' => $this->mainMemberSelectLabel($actor),
                 'house_type' => $actor->house_type?->value,
                 'house_number' => $actor->house_number,
             ]];
@@ -57,11 +61,25 @@ class AdminMemberService
         return $this->users->mainMembersForSelect()
             ->map(fn (User $member) => [
                 'value' => $member->id,
-                'label' => $member->fullName(),
+                'label' => $this->mainMemberSelectLabel($member),
                 'house_type' => $member->house_type?->value,
                 'house_number' => $member->house_number,
             ])
             ->all();
+    }
+
+    private function mainMemberSelectLabel(User $member): string
+    {
+        $house = $member->houseLabel();
+
+        if (! $house) {
+            return $member->fullName();
+        }
+
+        return __('messages.members_main_member_option', [
+            'name' => $member->fullName(),
+            'house' => $house,
+        ]);
     }
 
     public function defaultMainMemberId(User $actor): ?int
@@ -76,6 +94,57 @@ class AdminMemberService
     public function canPickMainMember(User $actor): bool
     {
         return ! $actor->isMainMember();
+    }
+
+    public function selectedMainMemberId(User $actor): ?int
+    {
+        if ($actor->isMainMember()) {
+            return $actor->id;
+        }
+
+        $storedId = session(self::SESSION_MAIN_MEMBER);
+
+        return $this->resolveListMainMemberId($actor, $storedId ? (int) $storedId : null);
+    }
+
+    public function rememberSelectedMainMember(User $actor, int $mainMemberId): void
+    {
+        if ($actor->isMainMember()) {
+            session([self::SESSION_MAIN_MEMBER => $actor->id]);
+
+            return;
+        }
+
+        $resolvedId = $this->resolveListMainMemberId($actor, $mainMemberId);
+
+        if (! $resolvedId) {
+            throw ValidationException::withMessages([
+                'main_member_id' => [__('messages.members_main_member_required')],
+            ]);
+        }
+
+        session([self::SESSION_MAIN_MEMBER => $resolvedId]);
+    }
+
+    public function rememberEditingMember(User $member): void
+    {
+        session([self::SESSION_EDITING_MEMBER => $member->id]);
+    }
+
+    public function editingMember(): ?User
+    {
+        $memberId = session(self::SESSION_EDITING_MEMBER);
+
+        if (! $memberId) {
+            return null;
+        }
+
+        return $this->users->findById((int) $memberId);
+    }
+
+    public function clearEditingMember(): void
+    {
+        session()->forget(self::SESSION_EDITING_MEMBER);
     }
 
     public function membershipTypesForSelect(): array

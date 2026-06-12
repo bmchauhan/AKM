@@ -11,7 +11,7 @@
             @include('admin.members._form', [
                 'mainMembers' => $mainMembers,
                 'membershipTypes' => $membershipTypes,
-                'defaultMainMemberId' => $defaultMainMemberId ?? request('main_member_id'),
+                'defaultMainMemberId' => $defaultMainMemberId,
                 'canPickMainMember' => $canPickMainMember,
             ])
 

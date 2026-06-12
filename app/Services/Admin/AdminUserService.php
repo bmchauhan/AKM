@@ -17,14 +17,54 @@ class AdminUserService
 {
     use HandlesUploads;
 
+    public const SESSION_EDITING_USER = 'admin.users.editing_user_id';
+
     public function __construct(
         private readonly UserRepositoryInterface $users,
     ) {}
 
-    public function listForScreen(): array
+    public function rememberEditingUser(User $user): void
     {
-        return $this->users->allForAdmin()
-            ->map(fn (User $user) => [
+        session([self::SESSION_EDITING_USER => $user->id]);
+    }
+
+    public function editingUser(): ?User
+    {
+        $userId = session(self::SESSION_EDITING_USER);
+
+        if (! $userId) {
+            return null;
+        }
+
+        return $this->users->findById((int) $userId);
+    }
+
+    public function clearEditingUser(): void
+    {
+        session()->forget(self::SESSION_EDITING_USER);
+    }
+
+    /**
+     * @param  array{house_type?: string, house_number?: string, name?: string, role?: string}  $filters
+     * @return array{users: \Illuminate\Pagination\LengthAwarePaginator, filters: array<string, string>, roleOptions: list<array{value: string, label: string}>}
+     */
+    public function listForScreen(User $actor, array $filters = [], int $perPage = 25): array
+    {
+        $normalizedFilters = [
+            'house_type' => trim((string) ($filters['house_type'] ?? '')),
+            'house_number' => trim((string) ($filters['house_number'] ?? '')),
+            'name' => trim((string) ($filters['name'] ?? '')),
+            'role' => trim((string) ($filters['role'] ?? '')),
+        ];
+
+        $queryFilters = $normalizedFilters;
+
+        if (! $actor->isSuperAdmin()) {
+            $queryFilters['exclude_super_admin'] = true;
+        }
+
+        $users = $this->users->paginatedForAdmin($queryFilters, $perPage)
+            ->through(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->fullName(),
                 'mobile' => $user->mobile_number ?? '—',
@@ -33,9 +73,69 @@ class AdminUserService
                 'gender' => $user->gender?->label() ?? '—',
                 'profile_image_url' => $user->profileImageUrl(),
                 'is_super_admin' => $user->isSuperAdmin(),
+                'is_main_member' => $user->isMainMember(),
+                'household_count' => (int) ($user->household_members_count ?? 0),
+            ]);
+
+        return [
+            'users' => $users,
+            'filters' => $normalizedFilters,
+            'roleOptions' => $this->rolesForFilter($actor),
+        ];
+    }
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    public function rolesForFilter(User $actor): array
+    {
+        return Role::query()
+            ->when(! $actor->isSuperAdmin(), function ($query) {
+                $query->where('slug', '!=', UserRole::SuperAdmin->value);
+            })
+            ->orderBy('name')
+            ->get(['slug', 'name', 'short_form'])
+            ->map(fn (Role $role) => [
+                'value' => $role->slug,
+                'label' => $role->name.' ('.$role->short_form.')',
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array{main_member: array<string, mixed>, members: list<array<string, mixed>>}
+     */
+    public function householdMembersForScreen(User $mainMember): array
+    {
+        if (! $mainMember->isMainMember()) {
+            throw ValidationException::withMessages([
+                'user' => [__('messages.users_household_not_main_member')],
+            ]);
+        }
+
+        $members = $this->users->householdMembersForMainMember($mainMember->id)
+            ->map(fn (User $member) => [
+                'id' => $member->id,
+                'name' => $member->fullName(),
+                'mobile' => $member->mobile_number ?? '—',
+                'house' => $member->houseLabel() ?? '—',
+                'role' => $member->roleLabel(),
+                'gender' => $member->gender?->label() ?? '—',
+                'profile_image_url' => $member->profileImageUrl(),
             ])
             ->values()
             ->all();
+
+        return [
+            'main_member' => [
+                'id' => $mainMember->id,
+                'name' => $mainMember->fullName(),
+                'house' => $mainMember->houseLabel() ?? '—',
+                'role' => $mainMember->roleLabel(),
+                'mobile' => $mainMember->mobile_number ?? '—',
+            ],
+            'members' => $members,
+        ];
     }
 
     public function rolesForSelect(User $actor): array

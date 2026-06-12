@@ -6,7 +6,7 @@
             <p class="mt-1 text-sm text-[#0F141E]/70">{{ $member->fullName() }}</p>
         </div>
 
-        <form method="POST" action="{{ route('admin.members.update', $member) }}" enctype="multipart/form-data" class="rounded-xl border border-[#E6EBF4] bg-white p-4 sm:p-6" autocomplete="off" novalidate>
+        <form method="POST" action="{{ route('admin.members.update') }}" enctype="multipart/form-data" class="rounded-xl border border-[#E6EBF4] bg-white p-4 sm:p-6" autocomplete="off" novalidate>
             @csrf
             @method('PUT')
             @include('admin.members._form', [

@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
+use App\Services\Admin\AdminUserService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -14,14 +15,17 @@ class UpdateUserRequest extends FormRequest
     public function authorize(): bool
     {
         $user = $this->user();
-        $target = $this->route('user');
+        $targetId = session(AdminUserService::SESSION_EDITING_USER);
+        $target = $targetId ? \App\Models\User::query()->find($targetId) : null;
 
-        return $user?->can('users.manage', [$target, 'update']) ?? false;
+        return $user && $target
+            ? $user->can('users.manage', [$target, 'update'])
+            : false;
     }
 
     public function rules(): array
     {
-        $userId = $this->route('user')?->id;
+        $userId = session(AdminUserService::SESSION_EDITING_USER);
 
         return [
             'first_name' => ['required', 'string', 'max:100'],

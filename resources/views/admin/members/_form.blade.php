@@ -56,30 +56,15 @@
         </x-common.select>
 
         @if ($canPickMainMember)
-            <div>
-                <label for="linked_main_member_id" class="mb-1.5 block text-sm font-semibold text-[#080D21]">
-                    {{ __('messages.members_main_member') }}
-                    <span class="text-[#AB1E23]">*</span>
-                </label>
-                <select
-                    name="linked_main_member_id"
-                    id="linked_main_member_id"
-                    x-model.number="selectedMainMemberId"
-                    @change="applyHouseFromMainMember()"
-                    required
-                    class="w-full rounded-lg border border-[#E6EBF4] bg-white px-3 py-2.5 text-sm text-[#0F141E] shadow-sm transition focus:border-[#AB1E23] focus:outline-none focus:ring-2 focus:ring-[#AB1E23]/20"
-                >
-                    <option value="">{{ __('messages.members_select_main_member') }}</option>
-                    @foreach ($mainMemberOptions as $option)
-                        <option value="{{ $option['value'] }}" @selected((int) $selectedMainMemberId === (int) $option['value'])>
-                            {{ $option['label'] }}
-                        </option>
-                    @endforeach
-                </select>
-                @error('linked_main_member_id')
-                    <p class="mt-1.5 text-sm font-medium text-[#AB1E23]">{{ $message }}</p>
-                @enderror
-            </div>
+            <x-common.searchable-select
+                name="linked_main_member_id"
+                :label="__('messages.members_main_member')"
+                :options="$mainMemberOptions"
+                :value="$selectedMainMemberId"
+                :placeholder="__('messages.members_select_main_member')"
+                required
+                x-on:searchable-select-changed="selectedMainMemberId = Number($event.detail.value) || ''; applyHouseFromMainMember()"
+            />
         @else
             <input type="hidden" name="linked_main_member_id" value="{{ $defaultMainMemberId }}">
             <div class="rounded-xl border border-[#E6EBF4] bg-[#E6EBF4]/40 px-4 py-3 text-sm text-[#0F141E]/80">
