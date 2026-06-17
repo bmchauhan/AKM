@@ -19,7 +19,9 @@ class DashboardController extends Controller
         return view('admin.dashboard', [
             'societyStats' => $data['society_stats'],
             'householdStats' => $data['household_stats'],
+            'financeStats' => $data['finance_stats'],
             'residentCard' => $data['resident_card'],
+            'showMyPaymentsLink' => $data['show_my_payments_link'],
         ]);
     }
 }

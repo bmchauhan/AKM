@@ -132,22 +132,24 @@
                                 @endif
                             </x-common.icon-action>
                         @endif
-                        @can('users.update')
-                            @if (! $user['is_super_admin'] || auth()->user()->can('super-admin'))
-                                <form method="POST" action="{{ route('admin.users.open-edit') }}" class="inline-flex">
-                                    @csrf
-                                    <input type="hidden" name="user_id" value="{{ $user['id'] }}">
-                                    <x-common.icon-action
-                                        type="submit"
-                                        :title="__('messages.users_update')"
-                                    >
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                    </x-common.icon-action>
-                                </form>
-                            @endif
-                        @endcan
+                        @if ($user['can_edit'] && (! $user['is_super_admin'] || auth()->user()->can('super-admin')))
+                            <form
+                                method="POST"
+                                action="{{ $user['is_household_member'] ? route('admin.members.open-edit') : route('admin.users.open-edit') }}"
+                                class="inline-flex"
+                            >
+                                @csrf
+                                <input type="hidden" name="{{ $user['is_household_member'] ? 'member_id' : 'user_id' }}" value="{{ $user['id'] }}">
+                                <x-common.icon-action
+                                    type="submit"
+                                    :title="$user['is_household_member'] ? __('messages.members_update') : __('messages.users_update')"
+                                >
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </x-common.icon-action>
+                            </form>
+                        @endif
                         @can('users.delete')
                             @unless ($user['is_super_admin'])
                             <form method="POST" action="{{ route('admin.users.destroy') }}" class="inline-flex" onsubmit="return confirm(@js(__('messages.users_delete_confirm')))">

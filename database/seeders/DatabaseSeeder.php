@@ -13,6 +13,10 @@ class DatabaseSeeder extends Seeder
             ModuleSeeder::class,
             SuperAdminSeeder::class,
             DemoDataSeeder::class,
+            WorkerSeeder::class,
+            MaintenanceChargeSeeder::class,
+            MaintenanceLedgerSeeder::class,
+            DemoFinanceSeeder::class,
         ]);
     }
 }

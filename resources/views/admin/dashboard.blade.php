@@ -43,6 +43,35 @@
                         />
                     @endforeach
                 </div>
+                @if ($showMyPaymentsLink ?? false)
+                    <div class="flex justify-end">
+                        <a href="{{ route('admin.finance.my-payments.index') }}" class="text-sm font-semibold text-[#AB1E23] hover:text-[#080D21]">
+                            {{ __('messages.finance_my_payments_view') }} →
+                        </a>
+                    </div>
+                @endif
+            </section>
+        @endif
+
+        @if (! empty($financeStats))
+            <section class="space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="text-sm font-bold uppercase tracking-wide text-[#080D21]">
+                        {{ __('messages.dashboard_section_finance') }}
+                    </h2>
+                    <a href="{{ route('admin.finance.index') }}" class="text-xs font-semibold text-[#AB1E23] hover:text-[#080D21]">
+                        {{ __('messages.finance_view_overview') }}
+                    </a>
+                </div>
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+                    @foreach ($financeStats as $stat)
+                        <x-admin.stat-card
+                            :label="$stat['label']"
+                            :value="$stat['value']"
+                            :hint="$stat['hint'] ?? null"
+                        />
+                    @endforeach
+                </div>
             </section>
         @endif
 

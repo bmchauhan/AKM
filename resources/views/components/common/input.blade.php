@@ -4,11 +4,13 @@
     'type' => 'text',
     'placeholder' => '',
     'required' => false,
+    'value' => '',
 ])
 
 @php
     $fieldError = $errors->first($name);
     $hasError = filled($fieldError);
+    $inputValue = old($name, $value);
 @endphp
 
 <div>
@@ -25,6 +27,7 @@
         type="{{ $type }}"
         name="{{ $name }}"
         id="{{ $name }}"
+        value="{{ $inputValue }}"
         @if($placeholder) placeholder="{{ $placeholder }}" @endif
         aria-invalid="{{ $hasError ? 'true' : 'false' }}"
         @if ($hasError) aria-describedby="{{ $name }}-error" @endif

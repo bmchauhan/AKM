@@ -9,11 +9,18 @@ use Illuminate\Support\Facades\DB;
 
 class AdminDashboardService
 {
+    public function __construct(
+        private readonly AdminFinanceOverviewService $financeOverview,
+        private readonly AdminFinanceMyPaymentService $myPayments,
+    ) {}
+
     /**
      * @return array{
      *     society_stats: list<array{key: string, label: string, value: string|int, hint: ?string}>,
      *     household_stats: list<array{key: string, label: string, value: string|int, hint: ?string}>,
-     *     resident_card: ?array{membership_label: string, main_member_name: string, house: string, linked_label: string}
+     *     finance_stats: list<array{key: string, label: string, value: string|int, hint: ?string}>,
+     *     resident_card: ?array{membership_label: string, main_member_name: string, house: string, linked_label: string},
+     *     show_my_payments_link: bool
      * }
      */
     public function screenData(User $actor): array
@@ -25,7 +32,11 @@ class AdminDashboardService
             'household_stats' => $actor->isMainMember()
                 ? $this->householdStats($actor)
                 : [],
+            'finance_stats' => $actor->can('finance.read')
+                ? $this->financeOverview->screenData()['fund_stats']
+                : [],
             'resident_card' => $this->residentCard($actor),
+            'show_my_payments_link' => $this->myPayments->canView($actor),
         ];
     }
 

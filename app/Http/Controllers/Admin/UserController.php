@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\MembershipRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\DestroyUserRequest;
 use App\Http\Requests\Admin\HouseholdMembersRequest;
@@ -9,6 +10,7 @@ use App\Http\Requests\Admin\OpenUserEditRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\User;
+use App\Services\Admin\AdminMemberService;
 use App\Services\Admin\AdminUserService;
 use App\Support\Toast;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +22,7 @@ class UserController extends Controller
 {
     public function __construct(
         private readonly AdminUserService $users,
+        private readonly AdminMemberService $members,
     ) {}
 
     public function index(Request $request): View
@@ -74,6 +77,14 @@ class UserController extends Controller
     {
         $user = User::query()->findOrFail($request->integer('user_id'));
 
+        if ($this->isHouseholdMember($user)) {
+            $this->users->clearEditingUser();
+            $this->members->assertCanManage(auth()->user(), $user);
+            $this->members->rememberEditingMember($user);
+
+            return redirect()->route('admin.members.edit');
+        }
+
         $this->users->assertCanManage(auth()->user(), $user);
         $this->users->rememberEditingUser($user);
 
@@ -86,6 +97,13 @@ class UserController extends Controller
 
         if (! $user) {
             return redirect()->route('admin.users.index');
+        }
+
+        if ($this->isHouseholdMember($user)) {
+            $this->users->clearEditingUser();
+            $this->members->rememberEditingMember($user);
+
+            return redirect()->route('admin.members.edit');
         }
 
         $this->users->assertCanManage(auth()->user(), $user);
@@ -131,5 +149,13 @@ class UserController extends Controller
         Toast::success(__('messages.users_deleted'));
 
         return redirect()->route('admin.users.index');
+    }
+
+    private function isHouseholdMember(User $user): bool
+    {
+        return in_array($user->membership_type, [
+            MembershipRole::FamilyMember->value,
+            MembershipRole::RentalMember->value,
+        ], true);
     }
 }

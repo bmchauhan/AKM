@@ -1,6 +1,16 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\Finance\CollectionController;
+use App\Http\Controllers\Admin\Finance\ExpenseController;
+use App\Http\Controllers\Admin\Finance\FinanceController;
+use App\Http\Controllers\Admin\Finance\FundSettingController;
+use App\Http\Controllers\Admin\Finance\MaintenanceChargeController;
+use App\Http\Controllers\Admin\Finance\MaintenanceChargeLookupController;
+use App\Http\Controllers\Admin\Finance\MaintenanceLedgerController;
+use App\Http\Controllers\Admin\Finance\MyPaymentController;
+use App\Http\Controllers\Admin\Finance\WorkerSalaryController;
+use App\Http\Controllers\Admin\Workers\WorkerController;
 use App\Http\Controllers\Admin\MemberController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\PasswordController;
@@ -64,6 +74,143 @@ Route::middleware('auth')->group(function () {
                 ->name('update');
             Route::delete('/', [UserController::class, 'destroy'])
                 ->middleware('admin.module:users,delete')
+                ->name('destroy');
+        });
+
+        Route::prefix('finance')->name('finance.')->group(function () {
+            Route::get('/', [FinanceController::class, 'index'])
+                ->middleware('admin.module:finance,read')
+                ->name('index');
+            Route::get('/fund-setting', [FundSettingController::class, 'show'])
+                ->middleware('admin.module:finance,read')
+                ->name('fund-setting.show');
+            Route::put('/fund-setting', [FundSettingController::class, 'update'])
+                ->name('fund-setting.update');
+
+            Route::get('/maintenance-charges', [MaintenanceChargeController::class, 'index'])
+                ->middleware('admin.module:finance,read')
+                ->name('maintenance-charges.index');
+            Route::post('/maintenance-charges', [MaintenanceChargeController::class, 'store'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-charges.store');
+            Route::post('/maintenance-charges/open-edit', [MaintenanceChargeController::class, 'openEdit'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-charges.open-edit');
+            Route::get('/maintenance-charges/cancel-edit', [MaintenanceChargeController::class, 'cancelEdit'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-charges.cancel-edit');
+            Route::put('/maintenance-charges/edit', [MaintenanceChargeController::class, 'update'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-charges.update');
+
+            Route::get('/maintenance-charge', [MaintenanceChargeLookupController::class, 'show'])
+                ->middleware('admin.module:finance,read')
+                ->name('maintenance-charge.show');
+
+            Route::post('/maintenance-ledger/apply-bulk-payment', [MaintenanceLedgerController::class, 'applyBulkPayment'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-ledger.apply-bulk-payment');
+            Route::get('/maintenance-ledger/house', [MaintenanceLedgerController::class, 'house'])
+                ->middleware('admin.module:finance,read')
+                ->name('maintenance-ledger.house');
+            Route::get('/maintenance-ledger', [MaintenanceLedgerController::class, 'index'])
+                ->middleware('admin.module:finance,read')
+                ->name('maintenance-ledger.index');
+            Route::post('/maintenance-ledger/generate', [MaintenanceLedgerController::class, 'generate'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-ledger.generate');
+            Route::post('/maintenance-ledger/sync-missing', [MaintenanceLedgerController::class, 'syncMissing'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-ledger.sync-missing');
+            Route::post('/maintenance-ledger/open-edit', [MaintenanceLedgerController::class, 'openEdit'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-ledger.open-edit');
+            Route::get('/maintenance-ledger/cancel-edit', [MaintenanceLedgerController::class, 'cancelEdit'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-ledger.cancel-edit');
+            Route::put('/maintenance-ledger/edit', [MaintenanceLedgerController::class, 'update'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-ledger.update');
+            Route::post('/maintenance-ledger/mark-paid', [MaintenanceLedgerController::class, 'markPaid'])
+                ->middleware('admin.module:finance,update')
+                ->name('maintenance-ledger.mark-paid');
+            Route::get('/maintenance-ledger/export', [MaintenanceLedgerController::class, 'export'])
+                ->middleware('admin.module:finance,read')
+                ->name('maintenance-ledger.export');
+
+            Route::get('/collections', [CollectionController::class, 'index'])
+                ->middleware('admin.module:finance,read')
+                ->name('collections.index');
+            Route::post('/collections', [CollectionController::class, 'store'])
+                ->middleware('admin.module:finance,create')
+                ->name('collections.store');
+            Route::post('/collections/open-edit', [CollectionController::class, 'openEdit'])
+                ->middleware('admin.module:finance,update')
+                ->name('collections.open-edit');
+            Route::get('/collections/cancel-edit', [CollectionController::class, 'cancelEdit'])
+                ->middleware('admin.module:finance,update')
+                ->name('collections.cancel-edit');
+            Route::put('/collections/edit', [CollectionController::class, 'update'])
+                ->middleware('admin.module:finance,update')
+                ->name('collections.update');
+            Route::delete('/collections', [CollectionController::class, 'destroy'])
+                ->middleware('admin.module:finance,delete')
+                ->name('collections.destroy');
+            Route::get('/collections/export', [CollectionController::class, 'export'])
+                ->middleware('admin.module:finance,read')
+                ->name('collections.export');
+
+            Route::get('/expenses', [ExpenseController::class, 'index'])
+                ->middleware('admin.module:finance,read')
+                ->name('expenses.index');
+            Route::post('/expenses', [ExpenseController::class, 'store'])
+                ->middleware('admin.module:finance,create')
+                ->name('expenses.store');
+            Route::post('/expenses/open-edit', [ExpenseController::class, 'openEdit'])
+                ->middleware('admin.module:finance,update')
+                ->name('expenses.open-edit');
+            Route::get('/expenses/cancel-edit', [ExpenseController::class, 'cancelEdit'])
+                ->middleware('admin.module:finance,update')
+                ->name('expenses.cancel-edit');
+            Route::put('/expenses/edit', [ExpenseController::class, 'update'])
+                ->middleware('admin.module:finance,update')
+                ->name('expenses.update');
+            Route::delete('/expenses', [ExpenseController::class, 'destroy'])
+                ->middleware('admin.module:finance,delete')
+                ->name('expenses.destroy');
+            Route::get('/expenses/export', [ExpenseController::class, 'export'])
+                ->middleware('admin.module:finance,read')
+                ->name('expenses.export');
+
+            Route::get('/worker-salary', [WorkerSalaryController::class, 'show'])
+                ->middleware('admin.module:finance,read')
+                ->name('worker-salary.show');
+
+            Route::get('/my-payments', [MyPaymentController::class, 'index'])
+                ->name('my-payments.index');
+        });
+
+        Route::prefix('workers')->name('workers.')->group(function () {
+            Route::get('/', [WorkerController::class, 'index'])
+                ->middleware('admin.module:workers,read')
+                ->name('index');
+            Route::post('/', [WorkerController::class, 'store'])
+                ->middleware('admin.module:workers,create')
+                ->name('store');
+            Route::post('/open-edit', [WorkerController::class, 'openEdit'])
+                ->middleware('admin.module:workers,update')
+                ->name('open-edit');
+            Route::get('/cancel-edit', [WorkerController::class, 'cancelEdit'])
+                ->middleware('admin.module:workers,update')
+                ->name('cancel-edit');
+            Route::put('/edit', [WorkerController::class, 'update'])
+                ->middleware('admin.module:workers,update')
+                ->name('update');
+            Route::post('/salary', [WorkerController::class, 'storeSalary'])
+                ->middleware('admin.module:workers,update')
+                ->name('salary.store');
+            Route::delete('/', [WorkerController::class, 'destroy'])
+                ->middleware('admin.module:workers,delete')
                 ->name('destroy');
         });
 

@@ -125,6 +125,117 @@
     </div>
     @endcan
 
+    @can('finance.read')
+    <div x-data="{ financeOpen: @json(request()->routeIs('admin.finance.*')) }">
+      <button
+        type="button"
+        @click="financeOpen = !financeOpen"
+        class="flex w-full items-center gap-3 rounded px-3 py-2 text-sm transition {{ request()->routeIs('admin.finance.*') ? 'bg-[#AB1E23]/20 font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/70 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        :aria-expanded="financeOpen"
+      >
+        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="flex-1 text-left">{{ __('messages.finance') }}</span>
+        <svg
+          class="h-4 w-4 shrink-0 transition-transform duration-200"
+          :class="financeOpen ? 'rotate-90' : ''"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <div
+        x-show="financeOpen"
+        x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 -translate-y-1"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 -translate-y-1"
+        class="mt-1 space-y-1 pl-4"
+      >
+        <a
+          href="{{ route('admin.finance.index') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.index') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.index') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.finance_overview') }}
+        </a>
+        <a
+          href="{{ route('admin.finance.maintenance-ledger.house') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.maintenance-ledger.house') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.maintenance-ledger.house') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.finance_house_ledger') }}
+        </a>
+        <a
+          href="{{ route('admin.finance.maintenance-ledger.index') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.maintenance-ledger.index') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.maintenance-ledger.index') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.finance_maintenance_ledger') }}
+        </a>
+        <a
+          href="{{ route('admin.finance.collections.index') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.collections.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.collections.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.finance_collections') }}
+        </a>
+        <a
+          href="{{ route('admin.finance.expenses.index') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.expenses.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.expenses.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.finance_expenses') }}
+        </a>
+        <a
+          href="{{ route('admin.finance.maintenance-charges.index') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.maintenance-charges.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.maintenance-charges.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.finance_maintenance_charges') }}
+        </a>
+        <a
+          href="{{ route('admin.finance.fund-setting.show') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.fund-setting.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.fund-setting.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.finance_fund_setting') }}
+        </a>
+      </div>
+    </div>
+    @endcan
+
+    @can('workers.read')
+    <a
+      href="{{ route('admin.workers.index') }}"
+      class="flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.workers.*') ? 'bg-[#AB1E23] text-[#E6EBF4]' : 'text-[#E6EBF4]/70 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+    >
+      <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+      {{ __('messages.workers') }}
+    </a>
+    @endcan
+
+    @if (auth()->user()->isMainMember() && ! auth()->user()->can('finance.read'))
+    <a
+      href="{{ route('admin.finance.my-payments.index') }}"
+      class="flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.finance.my-payments.*') ? 'bg-[#AB1E23] text-[#E6EBF4]' : 'text-[#E6EBF4]/70 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+    >
+      <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+      {{ __('messages.finance_my_payments') }}
+    </a>
+    @endif
+
     @can('settings.read')
     <div x-data="{ settingsOpen: @json(request()->routeIs('admin.settings.*')) }">
       <button

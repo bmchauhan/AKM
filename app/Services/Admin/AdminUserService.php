@@ -65,18 +65,29 @@ class AdminUserService
         }
 
         $users = $this->users->paginatedForAdmin($queryFilters, $perPage)
-            ->through(fn (User $user) => [
-                'id' => $user->id,
-                'name' => $user->fullName(),
-                'mobile' => $user->mobile_number ?? '—',
-                'house' => $user->houseLabel() ?? '—',
-                'role' => $user->roleLabel(),
-                'gender' => $user->gender?->label() ?? '—',
-                'profile_image_url' => $user->profileImageUrl(),
-                'is_super_admin' => $user->isSuperAdmin(),
-                'is_main_member' => $user->isMainMember(),
-                'household_count' => (int) ($user->household_members_count ?? 0),
-            ]);
+            ->through(function (User $user) use ($actor) {
+                $isHouseholdMember = in_array($user->membership_type, [
+                    MembershipRole::FamilyMember->value,
+                    MembershipRole::RentalMember->value,
+                ], true);
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->fullName(),
+                    'mobile' => $user->mobile_number ?? '—',
+                    'house' => $user->houseLabel() ?? '—',
+                    'role' => $user->roleLabel(),
+                    'gender' => $user->gender?->label() ?? '—',
+                    'profile_image_url' => $user->profileImageUrl(),
+                    'is_super_admin' => $user->isSuperAdmin(),
+                    'is_main_member' => $user->isMainMember(),
+                    'is_household_member' => $isHouseholdMember,
+                    'can_edit' => $isHouseholdMember
+                        ? $actor->canManageMember($user, 'update')
+                        : $actor->canManageUser($user, 'update'),
+                    'household_count' => (int) ($user->household_members_count ?? 0),
+                ];
+            });
 
         return [
             'users' => $users,
