@@ -24,7 +24,8 @@ class AdminDashboardService
     /**
      * @return array{
      *     sections: list<array{key: string, title: string, subtitle: ?string, stats: list<array<string, mixed>>, link: ?string, link_label: ?string}>,
-     *     quick_actions: list<array{label: string, route: string, tone: string}>,
+     *     quick_actions: list<array{label: string, route: string, tone: string, description: string}>,
+     *     side_panel: ?array{key: string, title: string, subtitle: ?string, stats: list<array<string, mixed>>, link: ?string, link_label: ?string},
      *     alerts: list<array{tone: string, message: string, action_route: ?string, action_label: ?string}>
      * }
      */
@@ -33,6 +34,7 @@ class AdminDashboardService
         return [
             'sections' => $this->buildSections($actor),
             'quick_actions' => $this->quickActions($actor),
+            'side_panel' => $this->sideSnapPanel($actor),
             'alerts' => $this->alerts($actor),
         ];
     }
@@ -43,10 +45,6 @@ class AdminDashboardService
     private function buildSections(User $actor): array
     {
         $sections = [];
-
-        if ($committeeSection = $this->committeeDutySection($actor)) {
-            $sections[] = $committeeSection;
-        }
 
         if ($this->shouldShowSocietyStats($actor)) {
             $sections[] = $this->societySection($actor);
@@ -69,6 +67,149 @@ class AdminDashboardService
         }
 
         return $sections;
+    }
+
+    /**
+     * @return array{key: string, title: string, subtitle: ?string, stats: list<array<string, mixed>>, link: ?string, link_label: ?string}|null
+     */
+    private function sideSnapPanel(User $actor): ?array
+    {
+        if ($committeeSection = $this->committeeDutySection($actor)) {
+            return $committeeSection;
+        }
+
+        if ($actor->isSuperAdmin()) {
+            return null;
+        }
+
+        if ($actor->isMainMember()) {
+            return $this->householdPulseSection($actor);
+        }
+
+        if ($actor->isFamilyMember() || $actor->isRentalMember()) {
+            return $this->residentPulseSection($actor);
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{key: string, title: string, subtitle: ?string, stats: list<array<string, mixed>>, link: ?string, link_label: ?string}
+     */
+    private function householdPulseSection(User $actor): array
+    {
+        $outstanding = $this->memberOutstandingAmount($actor);
+        $household = $this->householdCounts($actor);
+        $profileComplete = $this->profileCompleteness($actor);
+        $pendingMonths = MaintenanceMonthlyEntry::query()
+            ->where('main_member_id', $actor->id)
+            ->whereIn('status', $this->unpaidStatuses())
+            ->count();
+        $paidThisYear = (float) MaintenanceMonthlyEntry::query()
+            ->where('main_member_id', $actor->id)
+            ->whereYear('billing_month', Carbon::now()->year)
+            ->sum('amount_paid');
+
+        return [
+            'key' => 'household_pulse',
+            'title' => __('messages.dashboard_section_household_pulse'),
+            'subtitle' => __('messages.dashboard_section_household_pulse_subtitle'),
+            'stats' => [
+                [
+                    'key' => 'outstanding',
+                    'label' => __('messages.dashboard_stat_outstanding'),
+                    'value' => $this->fundSettings->formatCompactMoney($outstanding),
+                    'hint' => $this->fundSettings->formatMoney($outstanding),
+                    'tone' => $outstanding > 0 ? 'expense' : 'income',
+                    'link' => route('admin.finance.my-payments.index'),
+                ],
+                [
+                    'key' => 'pending_months',
+                    'label' => __('messages.dashboard_stat_pending_months'),
+                    'value' => (string) $pendingMonths,
+                    'hint' => __('messages.dashboard_stat_pending_months_hint'),
+                    'tone' => $pendingMonths > 0 ? 'danger' : 'primary',
+                    'link' => route('admin.finance.my-payments.index'),
+                ],
+                [
+                    'key' => 'paid_year',
+                    'label' => __('messages.dashboard_stat_paid_year'),
+                    'value' => $this->fundSettings->formatCompactMoney($paidThisYear),
+                    'hint' => $this->fundSettings->formatMoney($paidThisYear),
+                    'tone' => 'income',
+                    'link' => route('admin.finance.my-payments.index'),
+                ],
+                [
+                    'key' => 'household_members',
+                    'label' => __('messages.dashboard_stat_household_members'),
+                    'value' => (string) $household['total'],
+                    'hint' => __('messages.dashboard_stat_household_members_hint', [
+                        'family' => (string) $household['family'],
+                        'rental' => (string) $household['rental'],
+                    ]),
+                    'tone' => 'accent',
+                    'link' => route('admin.members.index'),
+                ],
+                [
+                    'key' => 'profile_complete',
+                    'label' => __('messages.dashboard_stat_profile_complete'),
+                    'value' => $profileComplete.'%',
+                    'hint' => __('messages.dashboard_stat_profile_complete_hint'),
+                    'tone' => $profileComplete >= 80 ? 'income' : 'neutral',
+                    'link' => route('admin.profile'),
+                ],
+            ],
+            'link' => route('admin.members.index'),
+            'link_label' => __('messages.dashboard_manage_household'),
+        ];
+    }
+
+    /**
+     * @return array{key: string, title: string, subtitle: ?string, stats: list<array<string, mixed>>, link: ?string, link_label: ?string}
+     */
+    private function residentPulseSection(User $actor): array
+    {
+        $mainMember = $actor->mainMember;
+
+        return [
+            'key' => 'resident_pulse',
+            'title' => __('messages.dashboard_section_resident_pulse'),
+            'subtitle' => __('messages.dashboard_resident_linked', [
+                'name' => $mainMember?->fullName() ?? '—',
+            ]),
+            'stats' => [
+                [
+                    'key' => 'membership',
+                    'label' => __('messages.members_type'),
+                    'value' => $actor->membership_type
+                        ? MembershipRole::from($actor->membership_type)->shortForm()
+                        : '—',
+                    'hint' => $actor->membership_type
+                        ? MembershipRole::from($actor->membership_type)->label()
+                        : null,
+                    'tone' => 'primary',
+                    'link' => route('admin.profile'),
+                ],
+                [
+                    'key' => 'main_member',
+                    'label' => __('messages.members_main_member'),
+                    'value' => $mainMember?->fullName() ?? '—',
+                    'hint' => null,
+                    'tone' => 'accent',
+                    'link' => route('admin.profile'),
+                ],
+                [
+                    'key' => 'house',
+                    'label' => __('messages.users_house'),
+                    'value' => $actor->houseLabel() ?? $mainMember?->houseLabel() ?? '—',
+                    'hint' => null,
+                    'tone' => 'income',
+                    'link' => route('admin.profile'),
+                ],
+            ],
+            'link' => route('admin.profile'),
+            'link_label' => __('messages.dashboard_view_profile'),
+        ];
     }
 
     /**
@@ -618,6 +759,7 @@ class AdminDashboardService
                 'value' => (int) ($counts->total_users ?? 0),
                 'hint' => __('messages.dashboard_stat_total_users_hint'),
                 'tone' => 'primary',
+                'icon' => 'users',
             ],
             [
                 'key' => 'main_members',
@@ -625,6 +767,7 @@ class AdminDashboardService
                 'value' => (int) ($counts->main_members ?? 0),
                 'hint' => __('messages.dashboard_stat_main_members_hint'),
                 'tone' => 'income',
+                'icon' => 'main-member',
             ],
             [
                 'key' => 'family_members',
@@ -632,6 +775,7 @@ class AdminDashboardService
                 'value' => (int) ($counts->family_members ?? 0),
                 'hint' => __('messages.dashboard_stat_family_members_hint'),
                 'tone' => 'accent',
+                'icon' => 'family',
             ],
             [
                 'key' => 'rental_members',
@@ -639,6 +783,7 @@ class AdminDashboardService
                 'value' => (int) ($counts->rental_members ?? 0),
                 'hint' => __('messages.dashboard_stat_rental_members_hint'),
                 'tone' => 'neutral',
+                'icon' => 'rental',
             ],
         ];
 
@@ -649,6 +794,7 @@ class AdminDashboardService
                 'value' => (int) ($counts->committee_members ?? 0),
                 'hint' => __('messages.dashboard_stat_committee_members_hint'),
                 'tone' => 'expense',
+                'icon' => 'committee',
             ];
         }
 

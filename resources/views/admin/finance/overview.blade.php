@@ -137,6 +137,8 @@
                     <x-admin.stat-card
                         :label="$stat['label']"
                         :value="$stat['value']"
+                        :valueExact="$stat['value_exact'] ?? null"
+                        :icon="$stat['icon'] ?? null"
                         :hint="$stat['hint'] ?? null"
                         :tone="$stat['tone'] ?? 'neutral'"
                         :trend="$stat['trend'] ?? null"

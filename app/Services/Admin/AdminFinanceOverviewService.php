@@ -192,7 +192,7 @@ class AdminFinanceOverviewService
     }
 
     /**
-     * @return list<array{key: string, label: string, value: string, hint: ?string, tone: string, trend: ?array{direction: string, label: string}}>
+     * @return list<array{key: string, label: string, value: string, value_exact: string, hint: ?string, tone: string, icon: string, trend: ?array{direction: string, label: string}}>
      */
     private function buildFundStats(
         float $fundBalance,
@@ -209,49 +209,61 @@ class AdminFinanceOverviewService
             [
                 'key' => 'fund_balance',
                 'label' => __('messages.finance_stat_fund_balance'),
-                'value' => $this->fundSettings->formatMoney($fundBalance),
+                'value' => $this->fundSettings->formatCompactMoney($fundBalance),
+                'value_exact' => $this->fundSettings->formatMoney($fundBalance),
                 'hint' => __('messages.finance_stat_fund_balance_hint'),
                 'tone' => $fundBalance >= 0 ? 'primary' : 'danger',
+                'icon' => 'wallet',
                 'trend' => null,
             ],
             [
                 'key' => 'collections_period',
                 'label' => __('messages.finance_stat_collections_period'),
-                'value' => $this->fundSettings->formatMoney($periodCollections),
+                'value' => $this->fundSettings->formatCompactMoney($periodCollections),
+                'value_exact' => $this->fundSettings->formatMoney($periodCollections),
                 'hint' => __('messages.finance_stat_collections_period_hint', ['period' => $periodLabel]),
                 'tone' => 'income',
+                'icon' => 'collections',
                 'trend' => $this->trendMeta($periodCollections, $previousCollections),
             ],
             [
                 'key' => 'expenses_period',
                 'label' => __('messages.finance_stat_expenses_period'),
-                'value' => $this->fundSettings->formatMoney($periodExpenses),
+                'value' => $this->fundSettings->formatCompactMoney($periodExpenses),
+                'value_exact' => $this->fundSettings->formatMoney($periodExpenses),
                 'hint' => __('messages.finance_stat_expenses_period_hint', ['period' => $periodLabel]),
                 'tone' => 'expense',
+                'icon' => 'expenses',
                 'trend' => $this->trendMeta($periodExpenses, $previousExpenses, invert: true),
             ],
             [
                 'key' => 'net_period',
                 'label' => __('messages.finance_stat_net_period'),
-                'value' => $this->fundSettings->formatMoney($periodNet),
+                'value' => $this->fundSettings->formatCompactMoney($periodNet),
+                'value_exact' => $this->fundSettings->formatMoney($periodNet),
                 'hint' => __('messages.finance_stat_net_period_hint', ['period' => $periodLabel]),
                 'tone' => $periodNet >= 0 ? 'income' : 'danger',
+                'icon' => 'surplus',
                 'trend' => null,
             ],
             [
                 'key' => 'maintenance_period',
                 'label' => __('messages.finance_stat_maintenance_period'),
-                'value' => $this->fundSettings->formatMoney($periodMaintenance),
+                'value' => $this->fundSettings->formatCompactMoney($periodMaintenance),
+                'value_exact' => $this->fundSettings->formatMoney($periodMaintenance),
                 'hint' => __('messages.finance_stat_maintenance_period_hint', ['period' => $periodLabel]),
                 'tone' => 'neutral',
+                'icon' => 'maintenance',
                 'trend' => null,
             ],
             [
                 'key' => 'other_collections_period',
                 'label' => __('messages.finance_stat_other_collections_period'),
-                'value' => $this->fundSettings->formatMoney($periodOtherCollections),
+                'value' => $this->fundSettings->formatCompactMoney($periodOtherCollections),
+                'value_exact' => $this->fundSettings->formatMoney($periodOtherCollections),
                 'hint' => __('messages.finance_stat_other_collections_period_hint', ['period' => $periodLabel]),
                 'tone' => 'accent',
+                'icon' => 'other',
                 'trend' => null,
             ],
         ];

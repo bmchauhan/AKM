@@ -48,6 +48,47 @@ const formatMoney = (value, symbol = '₹') => {
     })}`;
 };
 
+const formatCompactMoney = (value, symbol = '₹') => {
+    const amount = Math.abs(Number(value) || 0);
+    const prefix = Number(value) < 0 ? '-' : '';
+
+    if (amount >= 10000000) {
+        const crores = amount / 10000000;
+
+        return `${prefix}${symbol}${crores % 1 === 0 ? crores : crores.toFixed(1)}Cr`;
+    }
+
+    if (amount >= 100000) {
+        const lakhs = amount / 100000;
+
+        return `${prefix}${symbol}${lakhs % 1 === 0 ? lakhs : lakhs.toFixed(1)}L`;
+    }
+
+    if (amount >= 1000) {
+        const thousands = amount / 1000;
+
+        return `${prefix}${symbol}${thousands % 1 === 0 ? thousands : thousands.toFixed(1)}K`;
+    }
+
+    return `${prefix}${symbol}${amount.toLocaleString('en-IN', {
+        maximumFractionDigits: 0,
+    })}`;
+};
+
+const chartAmount = (context) => {
+    const chart = context.chart;
+
+    if (chart.config.type === 'doughnut' || chart.config.type === 'pie') {
+        return context.parsed;
+    }
+
+    if (chart.options.indexAxis === 'y') {
+        return context.parsed.x;
+    }
+
+    return context.parsed.y;
+};
+
 const baseChartOptions = (currencySymbol) => ({
     responsive: true,
     maintainAspectRatio: false,
@@ -64,7 +105,7 @@ const baseChartOptions = (currencySymbol) => ({
                 label: (context) => {
                     const label = context.dataset.label ? `${context.dataset.label}: ` : '';
 
-                    return label + formatMoney(context.parsed.y ?? context.parsed, currencySymbol);
+                    return label + formatMoney(chartAmount(context), currencySymbol);
                 },
             },
         },
@@ -160,7 +201,7 @@ const initFinanceOverviewCharts = () => {
                         grid: { color: `${BRAND.alice}` },
                         ticks: {
                             color: BRAND.ink,
-                            callback: (value) => formatMoney(value, currencySymbol),
+                            callback: (value) => formatCompactMoney(value, currencySymbol),
                         },
                     },
                 },
@@ -237,7 +278,7 @@ const initFinanceOverviewCharts = () => {
                         grid: { color: BRAND.alice },
                         ticks: {
                             color: BRAND.ink,
-                            callback: (value) => formatMoney(value, currencySymbol),
+                            callback: (value) => formatCompactMoney(value, currencySymbol),
                         },
                     },
                     y: {

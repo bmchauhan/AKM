@@ -64,6 +64,44 @@ class AdminFinanceFundSettingService
         return '₹'.number_format((float) $amount, 2);
     }
 
+    public function formatCompactMoney(float|int|string|null $amount): string
+    {
+        $value = (float) $amount;
+        $prefix = $value < 0 ? '-' : '';
+        $abs = abs($value);
+
+        if ($abs >= 10000000) {
+            $crores = $abs / 10000000;
+
+            return $prefix.'₹'.$this->formatCompactUnit($crores).'Cr';
+        }
+
+        if ($abs >= 100000) {
+            $lakhs = $abs / 100000;
+
+            return $prefix.'₹'.$this->formatCompactUnit($lakhs).'L';
+        }
+
+        if ($abs >= 1000) {
+            $thousands = $abs / 1000;
+
+            return $prefix.'₹'.$this->formatCompactUnit($thousands).'K';
+        }
+
+        return $prefix.'₹'.number_format($abs, 0);
+    }
+
+    private function formatCompactUnit(float $unit): string
+    {
+        $rounded = round($unit, 1);
+
+        if (abs($rounded - round($rounded)) < 0.05) {
+            return (string) (int) round($rounded);
+        }
+
+        return rtrim(rtrim(number_format($rounded, 1, '.', ''), '0'), '.');
+    }
+
     public function defaultEffectiveDate(): string
     {
         return Carbon::today()->startOfYear()->toDateString();

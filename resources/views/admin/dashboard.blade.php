@@ -1,12 +1,7 @@
 <x-layouts.admin :pageTitle="__('messages.dashboard')">
   @php
-      $committeeSection = collect($sections)->first(
-          fn ($section) => ($section['key'] ?? '') === 'committee_duty'
-      );
-      $otherSections = collect($sections)
-          ->reject(fn ($section) => ($section['key'] ?? '') === 'committee_duty')
-          ->values();
-      $showPairedTables = ! empty($quick_actions) && filled($committeeSection);
+      $otherSections = collect($sections)->values();
+      $showPairedTables = ! empty($quick_actions) && filled($side_panel ?? null);
   @endphp
 
     <div class="space-y-8">
@@ -45,7 +40,7 @@
             </div>
         @endif
 
-        @if (! empty($quick_actions) || filled($committeeSection))
+        @if (! empty($quick_actions) || filled($side_panel ?? null))
             <div @class([
                 'grid gap-5 items-stretch',
                 'lg:grid-cols-2' => $showPairedTables,
@@ -72,20 +67,20 @@
                     </section>
                 @endif
 
-                @if (filled($committeeSection))
+                @if (filled($side_panel ?? null))
                     <section class="flex min-w-0 flex-col gap-3">
                         <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                             <div class="min-w-0">
                                 <h2 class="text-sm font-bold uppercase tracking-wide text-[#080D21]">
-                                    {{ $committeeSection['title'] }}
+                                    {{ $side_panel['title'] }}
                                 </h2>
-                                @if (! empty($committeeSection['subtitle']))
-                                    <p class="mt-1 line-clamp-2 text-sm text-[#0F141E]/60">{{ $committeeSection['subtitle'] }}</p>
+                                @if (! empty($side_panel['subtitle']))
+                                    <p class="mt-1 line-clamp-2 text-sm text-[#0F141E]/60">{{ $side_panel['subtitle'] }}</p>
                                 @endif
                             </div>
-                            @if (! empty($committeeSection['link']))
-                                <a href="{{ $committeeSection['link'] }}" class="shrink-0 text-xs font-semibold text-[#AB1E23] hover:text-[#080D21]">
-                                    {{ $committeeSection['link_label'] }} →
+                            @if (! empty($side_panel['link']))
+                                <a href="{{ $side_panel['link'] }}" class="shrink-0 text-xs font-semibold text-[#AB1E23] hover:text-[#080D21]">
+                                    {{ $side_panel['link_label'] }} →
                                 </a>
                             @endif
                         </div>
@@ -93,10 +88,10 @@
                             compact
                             class="flex-1"
                             :columns="[
-                                ['key' => 'summary', 'label' => __('messages.dashboard_col_module')],
+                                ['key' => 'summary', 'label' => __('messages.dashboard_col_snapshot')],
                                 ['key' => 'action', 'label' => __('messages.dashboard_col_action'), 'align' => 'right'],
                             ]"
-                            :rows="collect($committeeSection['stats'])->map(fn ($stat) => [
+                            :rows="collect($side_panel['stats'])->map(fn ($stat) => [
                                 'label' => $stat['label'],
                                 'value' => $stat['value'],
                                 'hint' => $stat['hint'] ?? null,
@@ -138,6 +133,8 @@
                         <x-admin.stat-card
                             :label="$stat['label']"
                             :value="$stat['value']"
+                            :valueExact="$stat['value_exact'] ?? null"
+                            :icon="$stat['icon'] ?? null"
                             :hint="$stat['hint'] ?? null"
                             :tone="$stat['tone'] ?? 'neutral'"
                             :trend="$stat['trend'] ?? null"
