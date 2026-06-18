@@ -1,7 +1,7 @@
 <header class="sticky top-0 z-50 border-b border-[#E6C280]/35 bg-white/95 shadow-[0_4px_20px_rgba(8,13,33,0.06)] backdrop-blur-sm">
     <div class="h-0.5 bg-gradient-to-r from-[#080D21] via-[#AB1E23] to-[#E6C280]"></div>
 
-    <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
+    <div class="mx-auto flex max-w-7xl min-w-0 items-center gap-3 overflow-hidden px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
         <x-frontend.logo height="h-12 sm:h-14" />
 
         <x-frontend.navigation class="min-w-0 flex-1 justify-center" />

@@ -1,17 +1,5 @@
 @php
-    $members = [
-        ['name' => 'Rajesh Mehta', 'position' => __('messages.committee_pos_chairman'), 'image' => 'https://i.pravatar.cc/400?img=12', 'chairman' => true],
-        ['name' => 'Priya Shah', 'position' => __('messages.committee_pos_vice_chairman'), 'image' => 'https://i.pravatar.cc/300?img=5'],
-        ['name' => 'Amit Patel', 'position' => __('messages.committee_pos_secretary'), 'image' => 'https://i.pravatar.cc/300?img=8'],
-        ['name' => 'Kavita Desai', 'position' => __('messages.committee_pos_treasurer'), 'image' => 'https://i.pravatar.cc/300?img=9'],
-        ['name' => 'Vikram Joshi', 'position' => __('messages.committee_pos_joint_secretary'), 'image' => 'https://i.pravatar.cc/300?img=11'],
-        ['name' => 'Neha Agarwal', 'position' => __('messages.committee_pos_events'), 'image' => 'https://i.pravatar.cc/300?img=16'],
-        ['name' => 'Suresh Iyer', 'position' => __('messages.committee_pos_facilities'), 'image' => 'https://i.pravatar.cc/300?img=13'],
-        ['name' => 'Deepa Reddy', 'position' => __('messages.committee_pos_security'), 'image' => 'https://i.pravatar.cc/300?img=20'],
-        ['name' => 'Arjun Khanna', 'position' => __('messages.committee_pos_cultural'), 'image' => 'https://i.pravatar.cc/300?img=15'],
-        ['name' => 'Meena Sharma', 'position' => __('messages.committee_pos_maintenance'), 'image' => 'https://i.pravatar.cc/300?img=23'],
-        ['name' => 'Rohan Gupta', 'position' => __('messages.committee_pos_member_relations'), 'image' => 'https://i.pravatar.cc/300?img=33'],
-    ];
+    $members = app(\App\Services\Frontend\FrontendCommitteeService::class)->publicMembers();
 @endphp
 
 <section
@@ -63,6 +51,7 @@
         </div>
 
         <div class="relative mt-8">
+            @if (count($members) > 0)
             <div
                 x-ref="track"
                 class="scrollbar-thin flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4 pt-1"
@@ -72,17 +61,26 @@
                         :name="$member['name']"
                         :position="$member['position']"
                         :image="$member['image']"
-                        :chairman="$member['chairman'] ?? false"
+                        :has-photo="$member['has_photo']"
+                        :is-chief="$member['is_chief']"
+                        :is-leadership="$member['is_leadership']"
                     />
                 @endforeach
             </div>
 
             <div class="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent"></div>
             <div class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-r from-transparent to-white"></div>
+            @else
+                <p class="rounded-2xl border border-[#E6EBF4] bg-[#ECEAE1]/40 px-6 py-12 text-center text-sm text-[#0F141E]/70">
+                    {{ __('messages.committee_empty') }}
+                </p>
+            @endif
         </div>
 
+        @if (count($members) > 0)
         <p class="mt-4 text-center text-xs text-[#0F141E]/60 sm:text-sm">
             {{ __('messages.committee_swipe_hint') }}
         </p>
+        @endif
     </div>
 </section>

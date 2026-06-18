@@ -1,5 +1,5 @@
 @props([
-    'href' => '#home',
+    'href' => route('home'),
     'height' => 'h-12 sm:h-14',
 ])
 

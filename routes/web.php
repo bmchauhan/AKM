@@ -18,12 +18,18 @@ use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\Settings\ModuleController;
 use App\Http\Controllers\Admin\Settings\PermissionController;
 use App\Http\Controllers\Admin\Settings\RoleController;
-use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Frontend\CommitteeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('frontend.home');
-});
+})->name('home');
+
+Route::view('/home-old', 'frontend.home-old')->name('home.old');
+
+Route::view('/news', 'frontend.news')->name('news');
+Route::get('/our-committee', CommitteeController::class)->name('committee');
+Route::view('/useful-directory', 'frontend.useful-directory')->name('useful-directory');
 
 Route::get('/lang/{locale}', function (string $locale) {
     if (! in_array($locale, ['en', 'hi', 'gu'], true)) {
