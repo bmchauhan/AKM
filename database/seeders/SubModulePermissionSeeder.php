@@ -91,6 +91,7 @@ class SubModulePermissionSeeder extends Seeder
                 'finance' => $fullAccess,
                 'workers' => $fullAccess,
                 'settings' => $fullAccess,
+                'landing_page' => $fullAccess,
             ],
             'chief_committee_member' => [
                 'users' => $fullAccess,

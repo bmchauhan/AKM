@@ -9,4 +9,5 @@ enum AdminModule: string
     case Finance = 'finance';
     case Workers = 'workers';
     case Settings = 'settings';
+    case LandingPage = 'landing_page';
 }

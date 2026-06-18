@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             MaintenanceChargeSeeder::class,
             MaintenanceLedgerSeeder::class,
             DemoFinanceSeeder::class,
+            UsefulDirectorySeeder::class,
         ]);
     }
 }

@@ -45,6 +45,13 @@ class ModuleSeeder extends Seeder
                 'is_system' => true,
                 'sort_order' => 5,
             ],
+            [
+                'slug' => 'landing_page',
+                'name' => 'Landing Page',
+                'description' => 'Manage public website content and landing page sections.',
+                'is_system' => true,
+                'sort_order' => 6,
+            ],
         ];
 
         foreach ($modules as $module) {

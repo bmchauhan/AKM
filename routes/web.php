@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\Finance\CollectionController;
 use App\Http\Controllers\Admin\Finance\ExpenseController;
@@ -18,7 +19,10 @@ use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\Settings\ModuleController;
 use App\Http\Controllers\Admin\Settings\PermissionController;
 use App\Http\Controllers\Admin\Settings\RoleController;
+use App\Http\Controllers\Admin\LandingPage\DirectoryRoleController;
+use App\Http\Controllers\Admin\LandingPage\UsefulDirectoryController;
 use App\Http\Controllers\Frontend\CommitteeController;
+use App\Http\Controllers\Frontend\UsefulDirectoryController as FrontendUsefulDirectoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -29,7 +33,7 @@ Route::view('/home-old', 'frontend.home-old')->name('home.old');
 
 Route::view('/news', 'frontend.news')->name('news');
 Route::get('/our-committee', CommitteeController::class)->name('committee');
-Route::view('/useful-directory', 'frontend.useful-directory')->name('useful-directory');
+Route::get('/useful-directory', FrontendUsefulDirectoryController::class)->name('useful-directory');
 
 Route::get('/lang/{locale}', function (string $locale) {
     if (! in_array($locale, ['en', 'hi', 'gu'], true)) {
@@ -255,6 +259,46 @@ Route::middleware('auth')->group(function () {
             Route::delete('/', [MemberController::class, 'destroy'])
                 ->middleware('admin.module:members_all,delete')
                 ->name('destroy');
+        });
+
+        Route::prefix('landing-page')->name('landing-page.')->group(function () {
+            Route::get('/directory-roles', [DirectoryRoleController::class, 'index'])
+                ->middleware('admin.module:landing_page_directory_roles,read')
+                ->name('directory-roles.index');
+            Route::post('/directory-roles', [DirectoryRoleController::class, 'store'])
+                ->middleware('admin.module:landing_page_directory_roles,create')
+                ->name('directory-roles.store');
+            Route::post('/directory-roles/open-edit', [DirectoryRoleController::class, 'openEdit'])
+                ->middleware('admin.module:landing_page_directory_roles,update')
+                ->name('directory-roles.open-edit');
+            Route::get('/directory-roles/cancel-edit', [DirectoryRoleController::class, 'cancelEdit'])
+                ->middleware('admin.module:landing_page_directory_roles,update')
+                ->name('directory-roles.cancel-edit');
+            Route::put('/directory-roles/edit', [DirectoryRoleController::class, 'update'])
+                ->middleware('admin.module:landing_page_directory_roles,update')
+                ->name('directory-roles.update');
+            Route::delete('/directory-roles', [DirectoryRoleController::class, 'destroy'])
+                ->middleware('admin.module:landing_page_directory_roles,delete')
+                ->name('directory-roles.destroy');
+
+            Route::get('/useful-directory', [UsefulDirectoryController::class, 'index'])
+                ->middleware('admin.module:landing_page_useful_directory,read')
+                ->name('useful-directory.index');
+            Route::post('/useful-directory', [UsefulDirectoryController::class, 'store'])
+                ->middleware('admin.module:landing_page_useful_directory,create')
+                ->name('useful-directory.store');
+            Route::post('/useful-directory/open-edit', [UsefulDirectoryController::class, 'openEdit'])
+                ->middleware('admin.module:landing_page_useful_directory,update')
+                ->name('useful-directory.open-edit');
+            Route::get('/useful-directory/cancel-edit', [UsefulDirectoryController::class, 'cancelEdit'])
+                ->middleware('admin.module:landing_page_useful_directory,update')
+                ->name('useful-directory.cancel-edit');
+            Route::put('/useful-directory/edit', [UsefulDirectoryController::class, 'update'])
+                ->middleware('admin.module:landing_page_useful_directory,update')
+                ->name('useful-directory.update');
+            Route::delete('/useful-directory', [UsefulDirectoryController::class, 'destroy'])
+                ->middleware('admin.module:landing_page_useful_directory,delete')
+                ->name('useful-directory.destroy');
         });
 
         Route::prefix('settings')->name('settings.')->group(function () {

@@ -77,7 +77,8 @@ class ModulePermissionService
             'name' => $module->name,
             'description' => $module->description ?? '',
             'is_system' => $module->is_system,
-            'settings_only' => str_starts_with($module->slug, 'settings_'),
+            'settings_only' => str_starts_with($module->slug, 'settings_')
+                || str_starts_with($module->slug, 'landing_page_'),
         ];
     }
 
@@ -95,7 +96,7 @@ class ModulePermissionService
             ->map(function (array $permission) use ($role) {
                 $module = Module::query()->find((int) ($permission['module_id'] ?? 0));
 
-                if ($module && str_starts_with($module->slug, 'settings_') && $role->slug !== UserRole::SuperAdmin->value) {
+                if ($module && (str_starts_with($module->slug, 'settings_') || str_starts_with($module->slug, 'landing_page_')) && $role->slug !== UserRole::SuperAdmin->value) {
                     return [
                         'module_id' => $module->id,
                         'can_create' => false,

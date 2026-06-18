@@ -1,4 +1,4 @@
-<div class="relative inline-block text-left" x-data="{ open: false }">
+<div class="relative z-[60] inline-block text-left" x-data="{ open: false }">
     <button
         type="button"
         @click="open = !open"
@@ -15,9 +15,15 @@
         x-show="open"
         @click.away="open = false"
         x-cloak
-        class="absolute right-0 z-50 mt-2 w-40 rounded border border-[#E6EBF4] bg-white shadow-lg"
+        x-transition:enter="transition ease-out duration-150"
+        x-transition:enter-start="opacity-0 translate-y-1"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-100"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 translate-y-1"
+        class="absolute right-0 z-[100] mt-2 w-44 origin-top-right rounded-lg border border-[#E6EBF4] bg-white py-1 shadow-lg ring-1 ring-[#080D21]/5"
     >
-        <div class="py-1">
+        <div class="py-0.5">
             <a
                 href="{{ route('lang.switch', 'en') }}"
                 class="block px-4 py-2 text-sm text-[#0F141E] hover:bg-[#E6EBF4] {{ app()->getLocale() == 'en' ? 'bg-[#ECEAE1] font-bold text-[#080D21]' : '' }}"

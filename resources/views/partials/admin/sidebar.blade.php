@@ -254,6 +254,62 @@
     </a>
     @endif
 
+    @can('landing_page.read')
+    <div x-data="{ landingPageOpen: @json(request()->routeIs('admin.landing-page.*')) }">
+      <button
+        type="button"
+        @click="landingPageOpen = !landingPageOpen"
+        class="flex w-full items-center gap-3 rounded px-3 py-2 text-sm transition {{ request()->routeIs('admin.landing-page.*') ? 'bg-[#AB1E23]/20 font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/70 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        :aria-expanded="landingPageOpen"
+      >
+        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+        </svg>
+        <span class="flex-1 text-left">{{ __('messages.landing_page') }}</span>
+        <svg
+          class="h-4 w-4 shrink-0 transition-transform duration-200"
+          :class="landingPageOpen ? 'rotate-90' : ''"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <div
+        x-show="landingPageOpen"
+        x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 -translate-y-1"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 -translate-y-1"
+        class="mt-1 space-y-1 pl-4"
+      >
+        @can('landing_page_directory_roles.read')
+        <a
+          href="{{ route('admin.landing-page.directory-roles.index') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.landing-page.directory-roles.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.landing-page.directory-roles.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.directory_roles') }}
+        </a>
+        @endcan
+        @can('landing_page_useful_directory.read')
+        <a
+          href="{{ route('admin.landing-page.useful-directory.index') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.landing-page.useful-directory.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.landing-page.useful-directory.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.useful_directory') }}
+        </a>
+        @endcan
+      </div>
+    </div>
+    @endcan
+
     @can('settings.read')
     <div x-data="{ settingsOpen: @json(request()->routeIs('admin.settings.*')) }">
       <button

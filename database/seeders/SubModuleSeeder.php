@@ -32,6 +32,10 @@ class SubModuleSeeder extends Seeder
                 ['slug' => 'settings_permissions', 'name_key' => 'settings_permissions', 'sort_order' => 2],
                 ['slug' => 'settings_roles', 'name_key' => 'settings_roles', 'sort_order' => 3],
             ],
+            'landing_page' => [
+                ['slug' => 'landing_page_directory_roles', 'name_key' => 'directory_roles', 'sort_order' => 1],
+                ['slug' => 'landing_page_useful_directory', 'name_key' => 'useful_directory', 'sort_order' => 2],
+            ],
         ];
 
         foreach ($definitions as $parentSlug => $children) {
@@ -58,6 +62,6 @@ class SubModuleSeeder extends Seeder
             }
         }
 
-        $this->command?->info('Sub-modules seeded for Users, Members, Finance, and Settings.');
+        $this->command?->info('Sub-modules seeded for Users, Members, Finance, Settings, and Landing Page.');
     }
 }
