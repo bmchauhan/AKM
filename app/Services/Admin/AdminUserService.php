@@ -2,8 +2,8 @@
 
 namespace App\Services\Admin;
 
-use App\Enums\CommitteeRole;
 use App\Enums\MembershipRole;
+use App\Enums\ModulePermissionAction;
 use App\Enums\UserRole;
 use App\Models\Role;
 use App\Models\User;
@@ -20,8 +20,11 @@ class AdminUserService
 
     public const SESSION_EDITING_USER = 'admin.users.editing_user_id';
 
+    public const SESSION_ASSIGNING_USER = 'admin.users.assigning_user_id';
+
     public function __construct(
         private readonly UserRepositoryInterface $users,
+        private readonly CommitteeRoleRegistry $committeeRoles,
     ) {}
 
     public function rememberEditingUser(User $user): void
@@ -43,6 +46,53 @@ class AdminUserService
     public function clearEditingUser(): void
     {
         session()->forget(self::SESSION_EDITING_USER);
+    }
+
+    public function rememberAssigningUser(User $user): void
+    {
+        session([self::SESSION_ASSIGNING_USER => $user->id]);
+    }
+
+    public function assigningUser(): ?User
+    {
+        $userId = session(self::SESSION_ASSIGNING_USER);
+
+        if (! $userId) {
+            return null;
+        }
+
+        return $this->users->findById((int) $userId);
+    }
+
+    public function clearAssigningUser(): void
+    {
+        session()->forget(self::SESSION_ASSIGNING_USER);
+    }
+
+    public function canAssignRoles(User $actor): bool
+    {
+        return $actor->isSuperAdmin()
+            || $actor->canOnAdminModule('users_all', ModulePermissionAction::Update);
+    }
+
+    public function canAssignRoleTo(User $actor, User $target): bool
+    {
+        if (! $this->canAssignRoles($actor)) {
+            return false;
+        }
+
+        if ($target->isSuperAdmin()) {
+            return $actor->isSuperAdmin();
+        }
+
+        if (in_array($target->membership_type, [
+            MembershipRole::FamilyMember->value,
+            MembershipRole::RentalMember->value,
+        ], true)) {
+            return $actor->canManageMember($target, 'update');
+        }
+
+        return $actor->canManageUser($target, 'update');
     }
 
     /**
@@ -85,6 +135,10 @@ class AdminUserService
                     'can_edit' => $isHouseholdMember
                         ? $actor->canManageMember($user, 'update')
                         : $actor->canManageUser($user, 'update'),
+                    'can_view_household' => $user->isMainMember()
+                        && ($actor->isSuperAdmin() || $actor->canOnAdminModule('users_all', ModulePermissionAction::Read)),
+                    'can_assign_role' => $this->canAssignRoleTo($actor, $user),
+                    'assigned_role' => $this->currentRoleAssignmentKey($user),
                     'household_count' => (int) ($user->household_members_count ?? 0),
                 ];
             });
@@ -108,7 +162,7 @@ class AdminUserService
             ]);
 
         $committeeOptions = Role::query()
-            ->whereIn('slug', array_map(fn (CommitteeRole $role) => $role->value, CommitteeRole::cases()))
+            ->committee()
             ->orderBy('name')
             ->get(['slug', 'name', 'short_form'])
             ->map(fn (Role $role) => [
@@ -196,20 +250,7 @@ class AdminUserService
             return [];
         }
 
-        $options = [['value' => '', 'label' => __('messages.users_committee_none')]];
-
-        foreach ($this->allowedCommitteeRolesForUserForm($actor) as $slug) {
-            $role = Role::query()->where('slug', $slug)->first(['slug', 'name', 'short_form']);
-
-            $options[] = [
-                'value' => $slug,
-                'label' => $role
-                    ? $role->name.' ('.$role->short_form.')'
-                    : CommitteeRole::from($slug)->label().' ('.CommitteeRole::from($slug)->shortForm().')',
-            ];
-        }
-
-        return $options;
+        return $this->committeeRoles->optionsForSelect(true);
     }
 
     public function assertCanManage(User $actor, User $target, string $action = 'update'): void
@@ -353,7 +394,7 @@ class AdminUserService
             return;
         }
 
-        if (! $actor->isSuperAdmin()) {
+        if (! $actor->isSuperAdmin() && ! $this->canAssignRoles($actor)) {
             throw ValidationException::withMessages([
                 'committee_role' => [__('messages.users_committee_not_allowed')],
             ]);
@@ -393,9 +434,170 @@ class AdminUserService
             return [];
         }
 
-        return array_map(
-            fn (CommitteeRole $role) => $role->value,
-            CommitteeRole::cases(),
-        );
+        return $this->committeeRoles->committeeSlugs();
+    }
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    public function assignableRolesForSelect(User $actor, ?User $target = null): array
+    {
+        if (! $this->canAssignRoles($actor)) {
+            return [];
+        }
+
+        $options = [];
+
+        if ($actor->isSuperAdmin()) {
+            $options[] = [
+                'value' => UserRole::SuperAdmin->value,
+                'label' => __('messages.users_role_super_admin'),
+            ];
+        }
+
+        foreach (MembershipRole::cases() as $membership) {
+            $options[] = [
+                'value' => $membership->value,
+                'label' => __('messages.users_role_group_membership').': '.$membership->label(),
+            ];
+        }
+
+        foreach ($this->committeeRoles->committeeRoles() as $role) {
+            $options[] = [
+                'value' => $role->slug,
+                'label' => __('messages.users_role_group_committee').': '.$role->name.' ('.$role->short_form.')',
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * @return list<array{value: int, label: string}>
+     */
+    public function usersForRoleAssignmentSelect(): array
+    {
+        return User::query()
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get()
+            ->reject(fn (User $user): bool => $user->isSuperAdmin())
+            ->map(fn (User $user): array => [
+                'value' => $user->id,
+                'label' => trim(($user->houseLabel() ? $user->houseLabel().' — ' : '').$user->fullName().' ('.$user->roleLabel().')'),
+            ])
+            ->values()
+            ->all();
+    }
+
+    public function currentRoleAssignmentKey(User $user): string
+    {
+        if ($user->isSuperAdmin()) {
+            return UserRole::SuperAdmin->value;
+        }
+
+        if (filled($user->committee_role)) {
+            return (string) $user->committee_role;
+        }
+
+        return (string) ($user->membership_type ?? MembershipRole::MainMember->value);
+    }
+
+    public function isAssignableRoleSlug(string $slug): bool
+    {
+        if ($slug === UserRole::SuperAdmin->value) {
+            return true;
+        }
+
+        if (MembershipRole::tryFrom($slug)) {
+            return true;
+        }
+
+        return $this->committeeRoles->isCommitteeSlug($slug);
+    }
+
+    public function assignRole(User $actor, User $target, string $assignedRole): User
+    {
+        if (! $this->canAssignRoles($actor)) {
+            throw ValidationException::withMessages([
+                'assigned_role' => [__('messages.users_role_super_admin_forbidden')],
+            ]);
+        }
+
+        if (! $this->canAssignRoleTo($actor, $target)) {
+            throw ValidationException::withMessages([
+                'user' => [__('messages.users_role_not_assignable')],
+            ]);
+        }
+
+        if (! $this->isAssignableRoleSlug($assignedRole)) {
+            throw ValidationException::withMessages([
+                'assigned_role' => [__('messages.users_role_not_assignable')],
+            ]);
+        }
+
+        $makingSuperAdmin = $assignedRole === UserRole::SuperAdmin->value;
+
+        if ($makingSuperAdmin && ! $actor->isSuperAdmin()) {
+            throw ValidationException::withMessages([
+                'assigned_role' => [__('messages.users_role_super_admin_forbidden')],
+            ]);
+        }
+
+        $this->assertSuperAdminChangeAllowed($actor, $target, $makingSuperAdmin);
+
+        $membershipType = $target->membership_type ?? MembershipRole::MainMember->value;
+        $committeeRole = null;
+
+        if ($makingSuperAdmin) {
+            $committeeRole = null;
+        } elseif (MembershipRole::tryFrom($assignedRole)) {
+            $membershipType = $assignedRole;
+            $committeeRole = null;
+        } elseif ($this->committeeRoles->isCommitteeSlug($assignedRole)) {
+            if ($membershipType === MembershipRole::RentalMember->value) {
+                throw ValidationException::withMessages([
+                    'assigned_role' => [__('messages.users_committee_rental_forbidden')],
+                ]);
+            }
+
+            $committeeRole = $assignedRole;
+        }
+
+        if (! $makingSuperAdmin) {
+            if (MembershipRole::tryFrom($assignedRole) && $assignedRole !== MembershipRole::FamilyMember->value) {
+                $this->assertAssignableMembership($actor, $membershipType);
+            }
+
+            $this->assertAssignableCommittee($actor, $membershipType, $committeeRole);
+        }
+
+        return $this->users->update($target, [
+            'membership_type' => $membershipType,
+            'committee_role' => $committeeRole,
+            'role' => User::syncLegacyRole($membershipType, $committeeRole, $makingSuperAdmin),
+        ]);
+    }
+
+    private function assertSuperAdminChangeAllowed(User $actor, User $target, bool $makingSuperAdmin): void
+    {
+        if ($makingSuperAdmin) {
+            return;
+        }
+
+        if (! $target->isSuperAdmin()) {
+            return;
+        }
+
+        $remaining = User::query()
+            ->where('role', UserRole::SuperAdmin->value)
+            ->where('id', '!=', $target->id)
+            ->count();
+
+        if ($remaining < 1) {
+            throw ValidationException::withMessages([
+                'assigned_role' => [__('messages.users_role_last_super_admin')],
+            ]);
+        }
     }
 }

@@ -7,7 +7,7 @@
                 <p class="mt-1 text-sm text-[#0F141E]/70">{{ __('messages.members_all_subtitle') }}</p>
             </div>
 
-            @can('members.create')
+            @can('members_add.create')
                 @if ($canChooseHouseholdScope)
                     <div class="flex flex-wrap gap-2" x-data="{ tab: @js($activeHouseholdTab) }" x-on:members-tab-changed.window="tab = $event.detail.tab">
                         <x-common.button

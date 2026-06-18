@@ -15,7 +15,7 @@
     }"
 >
     @if ($showTrigger)
-        @can('finance.create')
+        @can('finance_collections.create')
             <x-common.button type="button" @click="open = true">
                 {{ __('messages.finance_collection_add') }}
             </x-common.button>

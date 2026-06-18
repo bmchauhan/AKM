@@ -12,28 +12,42 @@
 
         <div class="overflow-hidden rounded-xl border border-[#E6EBF4] bg-white">
             <div class="hidden border-b border-[#E6EBF4] bg-[#E6EBF4]/50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#080D21] md:grid md:grid-cols-12 md:gap-3">
+                <div class="md:col-span-2">{{ __('messages.modules_type_column') }}</div>
                 <div class="md:col-span-2">{{ __('messages.modules_name') }}</div>
                 <div class="md:col-span-2">{{ __('messages.modules_slug') }}</div>
-                <div class="md:col-span-5">{{ __('messages.modules_description') }}</div>
+                <div class="md:col-span-4">{{ __('messages.modules_description') }}</div>
                 <div class="md:col-span-1 text-center">{{ __('messages.modules_roles_count') }}</div>
-                <div class="md:col-span-2 text-right">{{ __('messages.modules_status') }}</div>
+                <div class="md:col-span-1 text-right">{{ __('messages.modules_status') }}</div>
             </div>
 
             @forelse ($modules as $module)
-                <div class="border-b border-[#E6EBF4] px-4 py-4 last:border-b-0 md:grid md:grid-cols-12 md:items-center md:gap-3">
-                    <div class="mb-2 text-sm font-semibold text-[#080D21] md:col-span-2 md:mb-0">{{ $module['name'] }}</div>
+                <div
+                    class="border-b border-[#E6EBF4] px-4 py-4 last:border-b-0 md:grid md:grid-cols-12 md:items-center md:gap-3 {{ ($module['depth'] ?? 0) > 0 ? 'bg-[#ECEAE1]/20' : '' }}"
+                >
+                    <div class="mb-2 md:col-span-2 md:mb-0" style="padding-left: {{ ($module['depth'] ?? 0) * 1.25 }}rem">
+                        <span @class([
+                            'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                            'bg-[#E6C280]/30 text-[#080D21]' => ($module['depth'] ?? 0) === 0,
+                            'bg-[#E6EBF4] text-[#080D21]' => ($module['depth'] ?? 0) > 0,
+                        ])>
+                            {{ $module['type_label'] }}
+                        </span>
+                    </div>
+                    <div class="mb-2 text-sm font-semibold text-[#080D21] md:col-span-2 md:mb-0" style="padding-left: {{ ($module['depth'] ?? 0) * 1.25 }}rem">
+                        @if (($module['depth'] ?? 0) > 0)
+                            <span class="mr-2 text-[#0F141E]/30">└</span>
+                        @endif
+                        {{ $module['name'] }}
+                    </div>
                     <div class="mb-2 font-mono text-xs text-[#0F141E]/70 md:col-span-2 md:mb-0">{{ $module['slug'] }}</div>
-                    <div class="mb-2 text-sm text-[#0F141E]/80 md:col-span-5 md:mb-0">{{ $module['description'] ?: '—' }}</div>
+                    <div class="mb-2 text-sm text-[#0F141E]/80 md:col-span-4 md:mb-0">{{ $module['description'] ?: '—' }}</div>
                     <div class="mb-2 text-center text-sm text-[#0F141E] md:col-span-1 md:mb-0">{{ $module['roles_count'] }}</div>
-                    <div class="flex justify-end md:col-span-2">
+                    <div class="flex justify-end md:col-span-1">
                         @if ($module['is_system'])
                             <span class="inline-flex rounded-full bg-[#E6C280]/30 px-2.5 py-0.5 text-xs font-semibold text-[#080D21]">
                                 {{ __('messages.modules_system_badge') }}
                             </span>
                         @endif
-                        <span class="ml-2 inline-flex rounded-full bg-[#E6EBF4] px-2.5 py-0.5 text-xs font-medium text-[#080D21]">
-                            {{ __('messages.modules_read_only_badge') }}
-                        </span>
                     </div>
                 </div>
             @empty

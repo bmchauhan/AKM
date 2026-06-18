@@ -4,7 +4,7 @@
     'showMarkPaid' => true,
 ])
 
-@can('finance.update')
+@can('finance_maintenance_ledger.update')
     @if ($entryId)
         @if ($showMarkPaid)
             <form method="POST" action="{{ route('admin.finance.maintenance-ledger.mark-paid') }}" class="inline-flex">

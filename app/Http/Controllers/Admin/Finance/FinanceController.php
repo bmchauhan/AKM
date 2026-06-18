@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Admin\Finance;
 use App\Enums\FinanceCollectionType;
 use App\Http\Controllers\Admin\Finance\Concerns\OpensFinanceFormModal;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Finance\FinanceOverviewIndexRequest;
 use App\Services\Admin\AdminFinanceCollectionService;
 use App\Services\Admin\AdminFinanceExpenseService;
 use App\Services\Admin\AdminFinanceOverviewService;
 use App\Services\Admin\AdminWorkerService;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class FinanceController extends Controller
@@ -23,11 +23,12 @@ class FinanceController extends Controller
         private readonly AdminWorkerService $workers,
     ) {}
 
-    public function index(Request $request): View
+    public function index(FinanceOverviewIndexRequest $request): View
     {
-        $data = $this->overview->screenData();
+        $user = $request->user();
+        $data = $this->overview->screenData($request->filters());
 
-        if ($request->user()?->can('finance.create')) {
+        if ($user?->can('finance_collections.create') || $user?->can('finance_expenses.create')) {
             $data = [
                 ...$data,
                 ...$this->collections->createFormData(),

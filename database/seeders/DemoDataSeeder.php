@@ -150,6 +150,7 @@ class DemoDataSeeder extends Seeder
             ['first_name' => 'Dilip', 'middle_name' => 'Chandrakant', 'last_name' => 'Modi', 'committee_role' => 'committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '909', 'caste' => 'Modi'],
             ['first_name' => 'Rekha', 'middle_name' => 'Arvind', 'last_name' => 'Vyas', 'committee_role' => 'committee_member', 'gender' => Gender::Female, 'house_type' => HouseType::A, 'house_number' => '910', 'caste' => 'Vyas'],
             ['first_name' => 'Sanjay', 'middle_name' => 'Mukesh', 'last_name' => 'Thakkar', 'committee_role' => 'committee_member', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '911', 'caste' => 'Thakkar'],
+            ['first_name' => 'Bhavesh', 'middle_name' => 'Kantilal', 'last_name' => 'Shah', 'committee_role' => 'money_collector', 'gender' => Gender::Male, 'house_type' => HouseType::A, 'house_number' => '912', 'caste' => 'Shah'],
         ];
 
         return array_map(fn (array $row) => $this->enrichDefinition($row), $definitions);

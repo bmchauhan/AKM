@@ -2,6 +2,7 @@
     <div
         x-data="permissionsManager(
             @js($modules),
+            @js($module_groups),
             @js($roles),
             @js($permissions),
             @js(route('admin.settings.permissions.sync')),
@@ -25,7 +26,7 @@
                 <p class="mt-1 text-sm text-[#0F141E]/70">{{ __('messages.permissions_subtitle') }}</p>
             </div>
 
-            @can('settings.update')
+            @can('settings_permissions.update')
                 <x-common.button type="button" class="shrink-0" @click="save()" x-bind:disabled="saving || !selectedRoleId">
                     <span x-show="!saving">{{ __('messages.permissions_save') }}</span>
                     <span x-show="saving" x-cloak>{{ __('messages.permissions_saving') }}</span>
@@ -42,14 +43,22 @@
                 x-model.number="selectedRoleId"
                 class="w-full max-w-md rounded-lg border border-[#E6EBF4] bg-white px-3 py-2.5 text-sm text-[#0F141E] shadow-sm transition focus:border-[#AB1E23] focus:outline-none focus:ring-2 focus:ring-[#AB1E23]/20"
             >
-                <template x-for="role in roles" :key="role.id">
-                    <option :value="role.id" x-text="`${role.name} (${role.short_form})`"></option>
-                </template>
+                @foreach ($roles as $role)
+                    <option value="{{ $role['id'] }}">{{ $role['name'] }} ({{ $role['short_form'] }})</option>
+                @endforeach
             </select>
         </div>
 
         <div class="rounded-xl border border-[#E6EBF4] bg-[#E6EBF4]/40 px-4 py-3 text-sm text-[#0F141E]/80">
             {{ __('messages.permissions_hint') }}
+        </div>
+
+        <div
+            x-show="isSuperAdminRoleSelected"
+            x-cloak
+            class="rounded-xl border border-[#E6C280]/50 bg-[#E6C280]/15 px-4 py-3 text-sm text-[#080D21]"
+        >
+            {{ __('messages.permissions_super_admin_locked') }}
         </div>
 
         <div class="overflow-hidden rounded-xl border border-[#E6EBF4] bg-white">
@@ -66,97 +75,103 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <template x-for="module in modules" :key="module.id">
-                            <tr
-                                class="border-b border-[#E6EBF4] last:border-b-0"
-                                :class="isModuleDisabled(module) ? 'bg-[#ECEAE1]/30' : 'hover:bg-[#ECEAE1]/20'"
-                            >
-                                <td class="px-4 py-4 align-middle">
-                                    <div class="font-semibold text-[#080D21]" x-text="module.name"></div>
-                                    <div class="mt-0.5 font-mono text-xs text-[#0F141E]/50" x-text="module.slug"></div>
-                                    <div
-                                        class="mt-1.5 max-w-md text-xs leading-relaxed text-[#0F141E]/70"
-                                        x-show="module.description"
-                                        x-text="module.description"
-                                    ></div>
-                                </td>
+                        @forelse ($module_groups as $group)
+                            @if ($group['parent']['is_group_header'])
+                                <tr class="border-b border-[#E6EBF4] bg-[#ECEAE1]/40">
+                                    <td class="px-4 py-3 align-middle" colspan="6">
+                                        <div class="font-semibold text-[#080D21]">{{ $group['parent']['name'] }}</div>
+                                        <div class="mt-0.5 font-mono text-xs text-[#0F141E]/50">{{ $group['parent']['slug'] }}</div>
+                                        @if ($group['parent']['description'])
+                                            <div class="mt-1.5 max-w-md text-xs leading-relaxed text-[#0F141E]/70">
+                                                {{ $group['parent']['description'] }}
+                                            </div>
+                                        @endif
+                                        <span class="mt-2 inline-flex rounded-full bg-[#E6C280]/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#080D21]">
+                                            {{ __('messages.modules_type_main') }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endif
 
-                                <td class="px-3 py-4 text-center align-middle">
-                                    <label
-                                        class="inline-flex items-center justify-center rounded-lg p-2"
-                                        :class="isModuleDisabled(module) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-[#E6EBF4]/60'"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            class="h-4 w-4 rounded border-[#E6EBF4] text-[#AB1E23] focus:ring-[#AB1E23]/20"
-                                            :checked="flag('can_create', module)"
-                                            :disabled="isModuleDisabled(module)"
-                                            @change="toggleFlag(module, 'can_create')"
-                                        />
-                                    </label>
-                                </td>
+                            @foreach ($group['children'] as $child)
+                                <tr
+                                    @class([
+                                        'border-b border-[#E6EBF4] last:border-b-0',
+                                        'bg-[#ECEAE1]/20' => $group['parent']['is_group_header'],
+                                        'hover:bg-[#ECEAE1]/20' => ! $group['parent']['is_group_header'],
+                                    ])
+                                >
+                                    <td @class([
+                                        'px-4 py-3 align-middle',
+                                        'pl-10' => $group['parent']['is_group_header'],
+                                    ])>
+                                        <div class="flex items-start gap-2">
+                                            @if ($group['parent']['is_group_header'])
+                                                <span class="mt-0.5 text-[#0F141E]/30">└</span>
+                                            @endif
+                                            <div>
+                                                <div @class([
+                                                    'text-sm text-[#080D21]',
+                                                    'font-medium' => $group['parent']['is_group_header'],
+                                                    'font-semibold' => ! $group['parent']['is_group_header'],
+                                                ])>{{ $child['name'] }}</div>
+                                                <div class="mt-0.5 font-mono text-xs text-[#0F141E]/50">{{ $child['slug'] }}</div>
+                                                @if ($child['description'] && ! $group['parent']['is_group_header'])
+                                                    <div class="mt-1.5 max-w-md text-xs leading-relaxed text-[#0F141E]/70">
+                                                        {{ $child['description'] }}
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <span @class([
+                                            'mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#080D21]',
+                                            'bg-[#E6EBF4]' => $group['parent']['is_group_header'],
+                                            'bg-[#E6C280]/30' => ! $group['parent']['is_group_header'],
+                                        ])>
+                                            {{ $group['parent']['is_group_header'] ? __('messages.modules_type_sub') : __('messages.modules_type_main') }}
+                                        </span>
+                                    </td>
 
-                                <td class="px-3 py-4 text-center align-middle">
-                                    <label
-                                        class="inline-flex items-center justify-center rounded-lg p-2"
-                                        :class="isModuleDisabled(module) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-[#E6EBF4]/60'"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            class="h-4 w-4 rounded border-[#E6EBF4] text-[#AB1E23] focus:ring-[#AB1E23]/20"
-                                            :checked="flag('can_read', module)"
-                                            :disabled="isModuleDisabled(module)"
-                                            @change="toggleFlag(module, 'can_read')"
-                                        />
-                                    </label>
-                                </td>
+                                    @foreach (['can_create', 'can_read', 'can_update', 'can_delete'] as $permissionFlag)
+                                        <td class="px-3 py-3 text-center align-middle">
+                                            <label
+                                                class="inline-flex items-center justify-center rounded-lg p-2"
+                                                x-bind:class="isSuperAdminRoleSelected ? 'cursor-default' : (isModuleDisabledFor({{ $child['id'] }}) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-[#E6EBF4]/60')"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    class="h-4 w-4 rounded border-[#E6EBF4] text-[#AB1E23] focus:ring-[#AB1E23]/20"
+                                                    x-bind:checked="flagFor({{ $child['id'] }}, '{{ $permissionFlag }}')"
+                                                    x-bind:disabled="isModuleDisabledFor({{ $child['id'] }})"
+                                                    @change="toggleFlagFor({{ $child['id'] }}, '{{ $permissionFlag }}')"
+                                                />
+                                            </label>
+                                        </td>
+                                    @endforeach
 
-                                <td class="px-3 py-4 text-center align-middle">
-                                    <label
-                                        class="inline-flex items-center justify-center rounded-lg p-2"
-                                        :class="isModuleDisabled(module) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-[#E6EBF4]/60'"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            class="h-4 w-4 rounded border-[#E6EBF4] text-[#AB1E23] focus:ring-[#AB1E23]/20"
-                                            :checked="flag('can_update', module)"
-                                            :disabled="isModuleDisabled(module)"
-                                            @change="toggleFlag(module, 'can_update')"
-                                        />
-                                    </label>
-                                </td>
-
-                                <td class="px-3 py-4 text-center align-middle">
-                                    <label
-                                        class="inline-flex items-center justify-center rounded-lg p-2"
-                                        :class="isModuleDisabled(module) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-[#E6EBF4]/60'"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            class="h-4 w-4 rounded border-[#E6EBF4] text-[#AB1E23] focus:ring-[#AB1E23]/20"
-                                            :checked="flag('can_delete', module)"
-                                            :disabled="isModuleDisabled(module)"
-                                            @change="toggleFlag(module, 'can_delete')"
-                                        />
-                                    </label>
-                                </td>
-
-                                <td class="px-3 py-4 text-center align-middle">
-                                    <label
-                                        class="inline-flex items-center justify-center rounded-lg border border-[#E6C280]/40 bg-[#E6C280]/10 p-2"
-                                        :class="isModuleDisabled(module) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-[#E6C280]/20'"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            class="h-4 w-4 rounded border-[#E6C280] text-[#AB1E23] focus:ring-[#AB1E23]/20"
-                                            :checked="isAllChecked(module)"
-                                            :disabled="isModuleDisabled(module)"
-                                            @change="toggleAll(module)"
-                                        />
-                                    </label>
+                                    <td class="px-3 py-3 text-center align-middle">
+                                        <label
+                                            class="inline-flex items-center justify-center rounded-lg border border-[#E6C280]/40 bg-[#E6C280]/10 p-2"
+                                            x-bind:class="isSuperAdminRoleSelected ? 'cursor-default' : (isModuleDisabledFor({{ $child['id'] }}) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-[#E6C280]/20')"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                class="h-4 w-4 rounded border-[#E6C280] text-[#AB1E23] focus:ring-[#AB1E23]/20"
+                                                x-bind:checked="isAllCheckedFor({{ $child['id'] }})"
+                                                x-bind:disabled="isModuleDisabledFor({{ $child['id'] }})"
+                                                @change="toggleAllFor({{ $child['id'] }})"
+                                            />
+                                        </label>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="6" class="px-4 py-10 text-center text-sm text-[#0F141E]/60">
+                                    {{ __('messages.modules_empty') }}
                                 </td>
                             </tr>
-                        </template>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

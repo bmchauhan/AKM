@@ -8,7 +8,7 @@
         title: @js(__('messages.finance_maintenance_charge_add')),
     }"
 >
-    @can('finance.update')
+    @can('finance_maintenance_charges.update')
         <x-common.button type="button" @click="open = true">
             {{ __('messages.finance_maintenance_charge_add') }}
         </x-common.button>

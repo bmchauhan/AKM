@@ -6,7 +6,7 @@
     'houseReturn' => [],
 ])
 
-@can('finance.update')
+@can('finance_maintenance_ledger.update')
     @if ($member && count($allocationEntries) > 0)
         <div
             x-data="{

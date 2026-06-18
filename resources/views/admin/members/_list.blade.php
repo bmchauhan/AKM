@@ -43,7 +43,7 @@
                 <div class="mb-2 text-sm text-[#0F141E]/80 md:col-span-2 md:mb-0">{{ $member['main_member'] }}</div>
             @endif
             <div class="flex items-center justify-end gap-1 md:col-span-2">
-                @can('members.update')
+                @can('members_all.update')
                     <form method="POST" action="{{ route('admin.members.open-edit') }}" class="inline-flex">
                         @csrf
                         <input type="hidden" name="member_id" value="{{ $member['id'] }}">
@@ -57,7 +57,7 @@
                         </x-common.icon-action>
                     </form>
                 @endcan
-                @can('members.delete')
+                @can('members_all.delete')
                     <form method="POST" action="{{ route('admin.members.destroy') }}" class="inline-flex" onsubmit="return confirm(@js(__('messages.members_delete_confirm')))">
                         @csrf
                         @method('DELETE')

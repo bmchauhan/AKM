@@ -2,9 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Enums\UserRole;
 use App\Models\Module;
-use App\Models\Role;
 use Illuminate\Database\Seeder;
 
 class ModuleSeeder extends Seeder
@@ -52,78 +50,11 @@ class ModuleSeeder extends Seeder
         foreach ($modules as $module) {
             Module::query()->updateOrCreate(
                 ['slug' => $module['slug']],
-                $module,
+                [
+                    ...$module,
+                    'is_permission_target' => in_array($module['slug'], ['workers'], true),
+                ],
             );
-        }
-
-        $this->seedDefaultPermissions();
-    }
-
-    private function seedDefaultPermissions(): void
-    {
-        $usersModule = Module::query()->where('slug', 'users')->firstOrFail();
-        $membersModule = Module::query()->where('slug', 'members')->firstOrFail();
-        $financeModule = Module::query()->where('slug', 'finance')->firstOrFail();
-        $workersModule = Module::query()->where('slug', 'workers')->firstOrFail();
-        $settingsModule = Module::query()->where('slug', 'settings')->firstOrFail();
-        $fullAccess = [
-            'can_create' => true,
-            'can_read' => true,
-            'can_update' => true,
-            'can_delete' => true,
-        ];
-        $readCreate = [
-            'can_create' => true,
-            'can_read' => true,
-            'can_update' => false,
-            'can_delete' => false,
-        ];
-
-        $superAdmin = Role::query()->where('slug', UserRole::SuperAdmin->value)->first();
-        $ccm = Role::query()->where('slug', 'chief_committee_member')->first();
-        $vccm = Role::query()->where('slug', 'vice_chief_committee_member')->first();
-        $fcm = Role::query()->where('slug', 'finance_committee_member')->first();
-        $cm = Role::query()->where('slug', 'committee_member')->first();
-
-        if ($superAdmin) {
-            $superAdmin->modules()->sync([
-                $usersModule->id => $fullAccess,
-                $membersModule->id => $fullAccess,
-                $financeModule->id => $fullAccess,
-                $workersModule->id => $fullAccess,
-                $settingsModule->id => $fullAccess,
-            ]);
-        }
-
-        if ($ccm) {
-            $ccm->modules()->syncWithoutDetaching([
-                $usersModule->id => $fullAccess,
-                $membersModule->id => $fullAccess,
-                $financeModule->id => $fullAccess,
-                $workersModule->id => $fullAccess,
-            ]);
-        }
-
-        if ($vccm) {
-            $vccm->modules()->syncWithoutDetaching([
-                $usersModule->id => $fullAccess,
-                $membersModule->id => $fullAccess,
-                $financeModule->id => $fullAccess,
-                $workersModule->id => $fullAccess,
-            ]);
-        }
-
-        if ($fcm) {
-            $fcm->modules()->syncWithoutDetaching([
-                $financeModule->id => $fullAccess,
-                $workersModule->id => $fullAccess,
-            ]);
-        }
-
-        if ($cm) {
-            $cm->modules()->syncWithoutDetaching([
-                $financeModule->id => $readCreate,
-            ]);
         }
     }
 }

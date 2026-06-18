@@ -30,6 +30,7 @@ class ModuleRepository implements ModuleRepositoryInterface
             : ModulePermissionAction::from($action);
 
         return Module::query()
+            ->with('parent')
             ->where('slug', $moduleSlug)
             ->whereHas('roles', function ($query) use ($roleSlug, $action) {
                 $query->where('slug', $roleSlug)

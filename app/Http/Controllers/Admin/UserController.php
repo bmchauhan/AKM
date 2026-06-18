@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\MembershipRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AssignUserRoleRequest;
 use App\Http\Requests\Admin\DestroyUserRequest;
 use App\Http\Requests\Admin\HouseholdMembersRequest;
+use App\Http\Requests\Admin\OpenAssignUserRoleRequest;
 use App\Http\Requests\Admin\OpenUserEditRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
@@ -27,17 +29,35 @@ class UserController extends Controller
 
     public function index(Request $request): View
     {
-        $list = $this->users->listForScreen(auth()->user(), [
+        $actor = auth()->user();
+        $list = $this->users->listForScreen($actor, [
             'house_type' => $request->string('house_type')->toString(),
             'house_number' => $request->string('house_number')->toString(),
             'name' => $request->string('name')->toString(),
             'role' => $request->string('role')->toString(),
         ]);
 
+        $assigningUser = $this->users->assigningUser();
+        $shouldOpenAssignModal = $request->query('open') === 'assign-role'
+            || (session()->has('errors') && old('user_id') !== null);
+
+        if ($assigningUser && ! $shouldOpenAssignModal) {
+            $this->users->clearAssigningUser();
+            $assigningUser = null;
+        }
+
         return view('admin.users.index', [
             'users' => $list['users'],
             'filters' => $list['filters'],
             'roleOptions' => $list['roleOptions'],
+            'assignableRoles' => $this->users->canAssignRoles($actor)
+                ? $this->users->assignableRolesForSelect($actor, $assigningUser)
+                : [],
+            'assigningUser' => $assigningUser,
+            'openAssignRoleModal' => $assigningUser !== null && $shouldOpenAssignModal,
+            'currentAssignRole' => $assigningUser
+                ? $this->users->currentRoleAssignmentKey($assigningUser)
+                : '',
         ]);
     }
 
@@ -147,6 +167,38 @@ class UserController extends Controller
         $this->users->delete($user, auth()->user());
 
         Toast::success(__('messages.users_deleted'));
+
+        return redirect()->route('admin.users.index');
+    }
+
+    public function openAssignRole(OpenAssignUserRoleRequest $request): RedirectResponse
+    {
+        $user = User::query()->findOrFail($request->integer('user_id'));
+        $this->users->rememberAssigningUser($user);
+
+        return redirect()->route('admin.users.index', ['open' => 'assign-role']);
+    }
+
+    public function cancelAssignRole(): RedirectResponse
+    {
+        $this->users->clearAssigningUser();
+
+        return redirect()->route('admin.users.index');
+    }
+
+    public function assignRole(AssignUserRoleRequest $request): RedirectResponse
+    {
+        $user = User::query()->findOrFail($request->integer('user_id'));
+
+        $this->users->assignRole(
+            auth()->user(),
+            $user,
+            $request->string('assigned_role')->toString(),
+        );
+
+        $this->users->clearAssigningUser();
+
+        Toast::success(__('messages.users_role_assigned'));
 
         return redirect()->route('admin.users.index');
     }

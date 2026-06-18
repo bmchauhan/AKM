@@ -92,7 +92,7 @@
                         <p class="text-xl font-bold text-[#AB1E23]">{{ $summary['outstanding_total'] }}</p>
                     </div>
                 </div>
-                @can('finance.update')
+                @can('finance_house_ledger.update')
                     <div class="mt-4 flex justify-end border-t border-[#E6EBF4] pt-4">
                         @include('admin.finance.maintenance-ledger._bulk-payment-modal', [
                             'member' => $member,

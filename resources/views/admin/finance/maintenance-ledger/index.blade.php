@@ -20,7 +20,7 @@
                     {{ __('messages.finance_export_csv') }}
                 </x-common.button>
 
-                @can('finance.update')
+                @can('finance_maintenance_ledger.update')
                     <form method="POST" action="{{ route('admin.finance.maintenance-ledger.sync-missing') }}" class="inline">
                         @csrf
                         <input type="hidden" name="month" value="{{ $billingMonth }}">
@@ -89,7 +89,7 @@
             <div class="rounded-xl border border-[#E5989B]/40 bg-[#E5989B]/10 p-6 text-center">
                 <p class="font-medium text-[#080D21]">{{ __('messages.finance_ledger_empty_month') }}</p>
                 <p class="mt-1 text-sm text-[#0F141E]/70">{{ __('messages.finance_ledger_empty_month_hint') }}</p>
-                @can('finance.update')
+                @can('finance_maintenance_ledger.update')
                     <form method="POST" action="{{ route('admin.finance.maintenance-ledger.generate') }}" class="mt-4 inline-block">
                         @csrf
                         <input type="hidden" name="month" value="{{ $billingMonth }}">

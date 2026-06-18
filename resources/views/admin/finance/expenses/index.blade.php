@@ -16,7 +16,7 @@
                     {{ __('messages.finance_export_csv') }}
                 </x-common.button>
 
-                @can('finance.create')
+                @can('finance_expenses.create')
                     @include('admin.finance.expenses._add-modal', [
                         'expenseTags' => $expenseTags,
                         'workersGrouped' => $workersGrouped ?? [],
@@ -99,7 +99,7 @@
                     <div class="mb-1 text-right text-sm font-semibold text-[#AB1E23] md:col-span-2 md:mb-0">{{ $expense['amount'] }}</div>
                     <div class="mb-1 text-sm text-[#0F141E]/70 md:col-span-2 md:mb-0">{{ $expense['recorded_by'] }}</div>
                     <div class="flex items-center justify-end gap-1 md:col-span-1">
-                        @can('finance.update')
+                        @can('finance_expenses.update')
                             <form method="POST" action="{{ route('admin.finance.expenses.open-edit') }}" class="inline-flex">
                                 @csrf
                                 <input type="hidden" name="expense_id" value="{{ $expense['id'] }}">
@@ -110,7 +110,7 @@
                                 </x-common.icon-action>
                             </form>
                         @endcan
-                        @can('finance.delete')
+                        @can('finance_expenses.delete')
                             <form method="POST" action="{{ route('admin.finance.expenses.destroy') }}" class="inline-flex" onsubmit="return confirm(@js(__('messages.finance_expense_delete_confirm')))">
                                 @csrf
                                 @method('DELETE')

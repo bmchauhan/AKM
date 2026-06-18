@@ -23,6 +23,12 @@ document.addEventListener('alpine:init', () => {
             ...role,
             description: role.description ?? '',
             short_form: role.short_form ?? '',
+            role_type: role.role_type ?? 'committee',
+            role_type_label: role.role_type_label ?? messages.typeCommittee ?? 'Committee',
+            is_leadership: Boolean(role.is_leadership),
+            is_super_admin: Boolean(role.is_super_admin),
+            slug_locked: Boolean(role.slug_locked),
+            can_assign_user: role.can_assign_user ?? (role.role_type === 'committee' || role.is_super_admin),
             _key: role.id ? `role-${role.id}` : `new-${crypto.randomUUID()}`,
             _slugTouched: Boolean(role.id),
             _shortTouched: Boolean(role.id),
@@ -30,6 +36,7 @@ document.addEventListener('alpine:init', () => {
         deletedIds: [],
         saving: false,
         errors: {},
+        permissionsUrl: messages.permissionsUrl ?? '',
 
         addRole() {
             this.roles.push({
@@ -39,6 +46,12 @@ document.addEventListener('alpine:init', () => {
                 slug: '',
                 description: '',
                 is_system: false,
+                role_type: 'committee',
+                role_type_label: messages.typeCommittee ?? 'Committee',
+                is_leadership: false,
+                is_super_admin: false,
+                slug_locked: false,
+                can_assign_user: true,
                 users_count: 0,
                 _key: `new-${crypto.randomUUID()}`,
                 _slugTouched: false,
@@ -46,8 +59,12 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        isCommitteeRole(role) {
+            return role.role_type === 'committee' && ! role.is_super_admin;
+        },
+
         onNameInput(role) {
-            if (! role._slugTouched && ! role.is_system) {
+            if (! role._slugTouched && ! role.is_system && ! role.slug_locked) {
                 role.slug = slugify(role.name);
             }
 
@@ -94,6 +111,29 @@ document.addEventListener('alpine:init', () => {
             return Object.keys(this.errors).some((key) => key.startsWith(`roles.${index}.`));
         },
 
+        mapRolesFromResponse(roles) {
+            return roles.map((role) => ({
+                ...role,
+                description: role.description ?? '',
+                short_form: role.short_form ?? '',
+                role_type: role.role_type ?? 'committee',
+                role_type_label: role.role_type_label ?? messages.typeCommittee ?? 'Committee',
+                is_leadership: Boolean(role.is_leadership),
+                is_super_admin: Boolean(role.is_super_admin),
+                slug_locked: Boolean(role.slug_locked),
+                can_assign_user: Boolean(role.can_assign_user),
+                _key: `role-${role.id}`,
+                _slugTouched: true,
+                _shortTouched: true,
+            }));
+        },
+
+        refreshAssignableSlugs() {
+            this.assignableSlugs = this.roles
+                .filter((role) => role.can_assign_user)
+                .map((role) => role.slug);
+        },
+
         async save() {
             this.saving = true;
             this.errors = {};
@@ -107,12 +147,13 @@ document.addEventListener('alpine:init', () => {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
                     },
                     body: JSON.stringify({
-                        roles: this.roles.map(({ id, name, short_form, slug, description }) => ({
+                        roles: this.roles.map(({ id, name, short_form, slug, description, is_leadership }) => ({
                             id,
                             name,
                             short_form,
                             slug,
                             description,
+                            is_leadership: Boolean(is_leadership),
                         })),
                         deleted_ids: this.deletedIds,
                     }),
@@ -129,22 +170,57 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                this.roles = data.roles.map((role) => ({
-                    ...role,
-                    description: role.description ?? '',
-                    short_form: role.short_form ?? '',
-                    _key: `role-${role.id}`,
-                    _slugTouched: true,
-                    _shortTouched: true,
-                }));
+                this.roles = this.mapRolesFromResponse(data.roles ?? []);
                 this.deletedIds = [];
+                this.refreshAssignableSlugs();
 
                 window.toast?.('success', data.message ?? 'Roles saved.');
+
+                if (data.created_hint) {
+                    window.toast?.('info', data.created_hint);
+
+                    if (data.permissions_url || this.permissionsUrl) {
+                        setTimeout(() => {
+                            window.location.href = data.permissions_url || this.permissionsUrl;
+                        }, 1200);
+                    }
+                }
             } catch {
                 window.toast?.('error', messages.networkError ?? 'Could not save roles. Please try again.');
             } finally {
                 this.saving = false;
             }
+        },
+
+        assignUserOpen: false,
+        assignRoleSlug: '',
+        assignRoleName: '',
+        assignUserId: '',
+        assignableSlugs: messages.assignableSlugs ?? [],
+        usersForAssign: messages.usersForAssign ?? [],
+        assignUrl: messages.assignUrl ?? '',
+
+        get open() {
+            return this.assignUserOpen;
+        },
+
+        set open(value) {
+            this.assignUserOpen = value;
+        },
+
+        get title() {
+            return this.messages.assignUserTitle ?? 'Assign user';
+        },
+
+        canAssignUser(role) {
+            return Boolean(role.can_assign_user) || this.assignableSlugs.includes(role.slug);
+        },
+
+        openAssignUser(role) {
+            this.assignRoleSlug = role.slug;
+            this.assignRoleName = role.name;
+            this.assignUserId = '';
+            this.assignUserOpen = true;
         },
     }));
 });

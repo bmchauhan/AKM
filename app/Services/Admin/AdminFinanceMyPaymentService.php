@@ -16,7 +16,7 @@ class AdminFinanceMyPaymentService
 
     public function canView(User $actor): bool
     {
-        return $actor->isMainMember() && ! $actor->can('finance.read');
+        return $actor->isMainMember();
     }
 
     /**

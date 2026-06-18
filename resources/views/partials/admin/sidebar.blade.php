@@ -51,6 +51,7 @@
         x-transition:leave-end="opacity-0 -translate-y-1"
         class="mt-1 space-y-1 pl-4"
       >
+        @can('users_all.read')
         <a
           href="{{ route('admin.users.index') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.users.index') || request()->routeIs('admin.users.edit') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -58,7 +59,8 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.users.index') || request()->routeIs('admin.users.edit') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.users_all') }}
         </a>
-        @can('users.create')
+        @endcan
+        @can('users_add.create')
           <a
             href="{{ route('admin.users.create') }}"
             class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.users.create') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -105,6 +107,7 @@
         x-transition:leave-end="opacity-0 -translate-y-1"
         class="mt-1 space-y-1 pl-4"
       >
+        @can('members_all.read')
         <a
           href="{{ route('admin.members.index') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.members.index') || request()->routeIs('admin.members.edit') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -112,7 +115,8 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.members.index') || request()->routeIs('admin.members.edit') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.members_all') }}
         </a>
-        @can('members.create')
+        @endcan
+        @can('members_add.create')
           <a
             href="{{ route('admin.members.create') }}"
             class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.members.create') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -159,6 +163,7 @@
         x-transition:leave-end="opacity-0 -translate-y-1"
         class="mt-1 space-y-1 pl-4"
       >
+        @can('finance_overview.read')
         <a
           href="{{ route('admin.finance.index') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.index') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -166,6 +171,8 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.index') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.finance_overview') }}
         </a>
+        @endcan
+        @can('finance_house_ledger.read')
         <a
           href="{{ route('admin.finance.maintenance-ledger.house') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.maintenance-ledger.house') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -173,6 +180,8 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.maintenance-ledger.house') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.finance_house_ledger') }}
         </a>
+        @endcan
+        @can('finance_maintenance_ledger.read')
         <a
           href="{{ route('admin.finance.maintenance-ledger.index') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.maintenance-ledger.index') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -180,6 +189,8 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.maintenance-ledger.index') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.finance_maintenance_ledger') }}
         </a>
+        @endcan
+        @can('finance_collections.read')
         <a
           href="{{ route('admin.finance.collections.index') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.collections.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -187,6 +198,8 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.collections.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.finance_collections') }}
         </a>
+        @endcan
+        @can('finance_expenses.read')
         <a
           href="{{ route('admin.finance.expenses.index') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.expenses.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -194,6 +207,8 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.expenses.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.finance_expenses') }}
         </a>
+        @endcan
+        @can('finance_maintenance_charges.read')
         <a
           href="{{ route('admin.finance.maintenance-charges.index') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.maintenance-charges.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -201,6 +216,8 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.maintenance-charges.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.finance_maintenance_charges') }}
         </a>
+        @endcan
+        @can('finance_fund_setting.read')
         <a
           href="{{ route('admin.finance.fund-setting.show') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.finance.fund-setting.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -208,6 +225,7 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.finance.fund-setting.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.finance_fund_setting') }}
         </a>
+        @endcan
       </div>
     </div>
     @endcan
@@ -224,7 +242,7 @@
     </a>
     @endcan
 
-    @if (auth()->user()->isMainMember() && ! auth()->user()->can('finance.read'))
+    @if (auth()->user()->isMainMember())
     <a
       href="{{ route('admin.finance.my-payments.index') }}"
       class="flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.finance.my-payments.*') ? 'bg-[#AB1E23] text-[#E6EBF4]' : 'text-[#E6EBF4]/70 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -271,6 +289,7 @@
         x-transition:leave-end="opacity-0 -translate-y-1"
         class="mt-1 space-y-1 pl-4"
       >
+        @can('settings_modules.read')
         <a
           href="{{ route('admin.settings.modules.index') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.settings.modules.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -278,6 +297,8 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.settings.modules.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.settings_modules') }}
         </a>
+        @endcan
+        @can('settings_permissions.read')
         <a
           href="{{ route('admin.settings.permissions.index') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.settings.permissions.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -285,6 +306,8 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.settings.permissions.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.settings_permissions') }}
         </a>
+        @endcan
+        @can('settings_roles.read')
         <a
           href="{{ route('admin.settings.roles.index') }}"
           class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.settings.roles.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -292,6 +315,7 @@
           <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.settings.roles.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
           {{ __('messages.settings_roles') }}
         </a>
+        @endcan
       </div>
     </div>
     @endcan

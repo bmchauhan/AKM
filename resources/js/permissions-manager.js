@@ -15,8 +15,9 @@ const fullFlags = () => ({
 });
 
 document.addEventListener('alpine:init', () => {
-    Alpine.data('permissionsManager', (modules = [], roles = [], initialPermissions = {}, syncUrl = '', messages = {}) => ({
+    Alpine.data('permissionsManager', (modules = [], moduleGroups = [], roles = [], initialPermissions = {}, syncUrl = '', messages = {}) => ({
         modules,
+        moduleGroups,
         roles,
         messages,
         permissions: {},
@@ -44,7 +45,13 @@ document.addEventListener('alpine:init', () => {
                 });
             });
 
-            this.selectedRoleId = this.roles[0]?.id ?? null;
+            this.selectedRoleId = this.roles.find((role) => role.is_super_admin)?.id
+                ?? this.roles[0]?.id
+                ?? null;
+        },
+
+        get isSuperAdminRoleSelected() {
+            return Boolean(this.selectedRole?.is_super_admin);
         },
 
         get selectedRole() {
@@ -81,6 +88,30 @@ document.addEventListener('alpine:init', () => {
             const flags = this.moduleFlags(module);
 
             return CRUD_FLAGS.every((key) => flags[key]);
+        },
+
+        moduleById(moduleId) {
+            return this.modules.find((module) => module.id === moduleId) ?? { id: moduleId };
+        },
+
+        flagFor(moduleId, key) {
+            return this.flag(key, this.moduleById(moduleId));
+        },
+
+        isAllCheckedFor(moduleId) {
+            return this.isAllChecked(this.moduleById(moduleId));
+        },
+
+        isModuleDisabledFor(moduleId) {
+            return this.isModuleDisabled(this.moduleById(moduleId));
+        },
+
+        toggleFlagFor(moduleId, key) {
+            this.toggleFlag(this.moduleById(moduleId), key);
+        },
+
+        toggleAllFor(moduleId) {
+            this.toggleAll(this.moduleById(moduleId));
         },
 
         setModuleFlags(module, flags) {
@@ -167,6 +198,10 @@ document.addEventListener('alpine:init', () => {
 
                 if (data.permissions) {
                     this.applyServerPermissions(data.permissions);
+                }
+
+                if (data.module_groups) {
+                    this.moduleGroups = data.module_groups;
                 }
 
                 window.toast?.('success', data.message ?? 'Permissions saved.');

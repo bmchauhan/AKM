@@ -59,7 +59,7 @@
                         @endif
                     </div>
                     <div class="flex items-center justify-end md:col-span-1">
-                        @can('finance.update')
+                        @can('finance_maintenance_charges.update')
                             <form method="POST" action="{{ route('admin.finance.maintenance-charges.open-edit') }}" class="inline-flex">
                                 @csrf
                                 <input type="hidden" name="maintenance_charge_id" value="{{ $charge['id'] }}">

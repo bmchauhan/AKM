@@ -22,7 +22,7 @@
                 <p class="mt-1 text-sm text-[#0F141E]/70">{{ __('messages.users_all_subtitle') }}</p>
             </div>
 
-            @can('users.create')
+            @can('users_add.create')
                 <x-common.button :href="route('admin.users.create')">
                     {{ __('messages.users_add') }}
                 </x-common.button>
@@ -115,7 +115,7 @@
                     </div>
                     <div class="mb-2 text-sm text-[#0F141E]/70 md:col-span-1 md:mb-0">{{ $user['gender'] }}</div>
                     <div class="flex items-center justify-end gap-1 md:col-span-2">
-                        @if ($user['is_main_member'])
+                        @if ($user['can_view_household'] ?? $user['is_main_member'])
                             <x-common.icon-action
                                 type="button"
                                 variant="accent"
@@ -131,6 +131,21 @@
                                     </span>
                                 @endif
                             </x-common.icon-action>
+                        @endif
+                        @if ($user['can_assign_role'] ?? false)
+                            <form method="POST" action="{{ route('admin.users.open-assign-role') }}" class="inline-flex">
+                                @csrf
+                                <input type="hidden" name="user_id" value="{{ $user['id'] }}">
+                                <x-common.icon-action
+                                    type="submit"
+                                    variant="accent"
+                                    :title="__('messages.users_assign_role')"
+                                >
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                </x-common.icon-action>
+                            </form>
                         @endif
                         @if ($user['can_edit'] && (! $user['is_super_admin'] || auth()->user()->can('super-admin')))
                             <form
@@ -150,7 +165,7 @@
                                 </x-common.icon-action>
                             </form>
                         @endif
-                        @can('users.delete')
+                        @can('users_all.delete')
                             @unless ($user['is_super_admin'])
                             <form method="POST" action="{{ route('admin.users.destroy') }}" class="inline-flex" onsubmit="return confirm(@js(__('messages.users_delete_confirm')))">
                                 @csrf
@@ -229,5 +244,12 @@
                     </div>
                 </template>
         </x-common.modal>
+
+        @include('admin.users._assign-role-modal', [
+            'assigningUser' => $assigningUser ?? null,
+            'assignableRoles' => $assignableRoles ?? [],
+            'openOnLoad' => $openAssignRoleModal ?? false,
+            'currentRole' => $currentAssignRole ?? '',
+        ])
     </div>
 </x-layouts.admin>

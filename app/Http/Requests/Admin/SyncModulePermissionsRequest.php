@@ -8,7 +8,7 @@ class SyncModulePermissionsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('settings.update') ?? false;
+        return $this->user()?->can('settings_permissions.update') ?? false;
     }
 
     public function rules(): array

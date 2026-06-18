@@ -19,7 +19,7 @@
                     {{ __('messages.finance_export_csv') }}
                 </x-common.button>
 
-                @can('finance.create')
+                @can('finance_collections.create')
                     @include('admin.finance.collections._add-modal', [
                         'collectionTypes' => $collectionTypes,
                         'mainMembers' => $mainMembers,
@@ -113,7 +113,7 @@
                         @endif
                     </div>
                     <div class="flex items-center justify-end gap-1 md:col-span-1">
-                        @can('finance.update')
+                        @can('finance_collections.update')
                             <form method="POST" action="{{ route('admin.finance.collections.open-edit') }}" class="inline-flex">
                                 @csrf
                                 <input type="hidden" name="collection_id" value="{{ $collection['id'] }}">
@@ -124,7 +124,7 @@
                                 </x-common.icon-action>
                             </form>
                         @endcan
-                        @can('finance.delete')
+                        @can('finance_collections.delete')
                             <form method="POST" action="{{ route('admin.finance.collections.destroy') }}" class="inline-flex" onsubmit="return confirm(@js(__('messages.finance_collection_delete_confirm')))">
                                 @csrf
                                 @method('DELETE')

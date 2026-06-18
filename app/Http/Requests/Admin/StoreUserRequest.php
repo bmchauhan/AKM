@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Enums\CommitteeRole;
 use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
@@ -52,10 +51,7 @@ class StoreUserRequest extends FormRequest
                 'string',
                 Rule::when(
                     filled($this->input('committee_role')),
-                    [
-                        Rule::in($allowedCommittee),
-                        Rule::enum(CommitteeRole::class),
-                    ],
+                    [Rule::in($allowedCommittee)],
                 ),
                 Rule::prohibitedIf(fn () => $this->input('membership_type') === MembershipRole::RentalMember->value),
             ],

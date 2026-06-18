@@ -2,6 +2,9 @@
 
 namespace App\Enums;
 
+/**
+ * @deprecated Committee roles are defined in the `roles` table. Use CommitteeRoleRegistry instead.
+ */
 enum CommitteeRole: string
 {
     case ChiefCommitteeMember = 'chief_committee_member';

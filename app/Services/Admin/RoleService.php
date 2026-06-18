@@ -2,6 +2,8 @@
 
 namespace App\Services\Admin;
 
+use App\Enums\RoleType;
+use App\Enums\UserRole;
 use App\Repositories\Contracts\RoleRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -11,6 +13,7 @@ class RoleService
 {
     public function __construct(
         private readonly RoleRepositoryInterface $roles,
+        private readonly CommitteeRoleRegistry $committeeRoles,
     ) {}
 
     public function listForScreen(): array
@@ -23,15 +26,23 @@ class RoleService
                 'slug' => $role->slug,
                 'description' => $role->description ?? '',
                 'is_system' => $role->is_system,
-                'users_count' => $role->users()->count(),
+                'role_type' => $role->role_type?->value ?? RoleType::Committee->value,
+                'role_type_label' => $role->role_type?->label() ?? RoleType::Committee->label(),
+                'is_leadership' => (bool) $role->is_leadership,
+                'is_super_admin' => $role->isSuperAdminRole(),
+                'users_count' => $this->roles->usersCount($role->slug),
+                'slug_locked' => $this->roles->usersCount($role->slug) > 0,
+                'can_assign_user' => $role->isCommitteeRole() || $role->isSuperAdminRole(),
             ])
             ->values()
             ->all();
     }
 
-    public function sync(array $roles, array $deletedIds): void
+    public function sync(array $roles, array $deletedIds): array
     {
-        DB::transaction(function () use ($roles, $deletedIds) {
+        $createdSlugs = [];
+
+        DB::transaction(function () use ($roles, $deletedIds, &$createdSlugs) {
             foreach ($deletedIds as $id) {
                 $this->deleteRole((int) $id);
             }
@@ -40,20 +51,33 @@ class RoleService
                 if (! empty($roleData['id'])) {
                     $this->updateRole((int) $roleData['id'], $roleData);
                 } else {
-                    $this->createRole($roleData);
+                    $created = $this->createRole($roleData);
+                    $createdSlugs[] = $created->slug;
                 }
             }
         });
+
+        $this->committeeRoles->flush();
+
+        return $createdSlugs;
     }
 
-    private function createRole(array $data): void
+    private function createRole(array $data): \App\Models\Role
     {
-        $this->roles->create([
+        if (($data['role_type'] ?? RoleType::Committee->value) === RoleType::SuperAdmin->value) {
+            throw ValidationException::withMessages([
+                'roles' => [__('messages.roles_super_admin_create_forbidden')],
+            ]);
+        }
+
+        return $this->roles->create([
             'name' => trim($data['name']),
             'short_form' => $this->normalizeShortForm($data['short_form'] ?? $data['name']),
             'slug' => $this->normalizeSlug($data['slug'] ?? $data['name']),
             'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
             'is_system' => false,
+            'role_type' => RoleType::Committee->value,
+            'is_leadership' => (bool) ($data['is_leadership'] ?? false),
         ]);
     }
 
@@ -73,7 +97,13 @@ class RoleService
             'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
         ];
 
-        if (! $role->is_system) {
+        if ($role->isCommitteeRole()) {
+            $payload['is_leadership'] = (bool) ($data['is_leadership'] ?? false);
+        }
+
+        $usersAssigned = $this->roles->usersCount($role->slug) > 0;
+
+        if (! $role->is_system && ! $usersAssigned) {
             $payload['slug'] = $this->normalizeSlug($data['slug'] ?? $data['name']);
         }
 
@@ -88,7 +118,7 @@ class RoleService
             return;
         }
 
-        if ($role->is_system) {
+        if ($role->is_system || $role->isSuperAdminRole()) {
             throw ValidationException::withMessages([
                 'deleted_ids' => [__('messages.roles_system_delete')],
             ]);

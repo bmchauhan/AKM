@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\AdminModule;
-use App\Enums\CommitteeRole;
 use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
@@ -110,7 +109,7 @@ class User extends Authenticatable
 
         if (filled($this->committee_role)) {
             $parts[] = $this->committeeRoleRecord?->short_form
-                ?? CommitteeRole::from($this->committee_role)->shortForm();
+                ?? strtoupper(substr(str_replace('_', '', $this->committee_role), 0, 4));
         }
 
         return $parts !== [] ? implode(' · ', $parts) : '—';
@@ -169,17 +168,27 @@ class User extends Authenticatable
 
     public function isChiefCommitteeMember(): bool
     {
-        return $this->committee_role === CommitteeRole::ChiefCommitteeMember->value;
+        return $this->committee_role === 'chief_committee_member';
     }
 
     public function isViceChiefCommitteeMember(): bool
     {
-        return $this->committee_role === CommitteeRole::ViceChiefCommitteeMember->value;
+        return $this->committee_role === 'vice_chief_committee_member';
     }
 
     public function hasCommitteeLeadership(): bool
     {
-        return $this->isChiefCommitteeMember() || $this->isViceChiefCommitteeMember();
+        if (! $this->hasCommitteeRole()) {
+            return false;
+        }
+
+        if ($this->relationLoaded('committeeRoleRecord')) {
+            return (bool) $this->committeeRoleRecord?->is_leadership;
+        }
+
+        return (bool) Role::query()
+            ->where('slug', $this->committee_role)
+            ->value('is_leadership');
     }
 
     public function isMainMember(): bool
@@ -219,8 +228,8 @@ class User extends Authenticatable
         $permissions = app(ModulePermissionService::class);
         $committeeRole = (string) $this->committee_role;
 
-        return $permissions->roleCanOnModule($committeeRole, AdminModule::Users->value, ModulePermissionAction::Create)
-            || $permissions->roleCanOnModule($committeeRole, AdminModule::Users->value, ModulePermissionAction::Update);
+        return $permissions->roleCanOnModule($committeeRole, 'users_all', ModulePermissionAction::Create)
+            || $permissions->roleCanOnModule($committeeRole, 'users_all', ModulePermissionAction::Update);
     }
 
     /**
@@ -237,14 +246,45 @@ class User extends Authenticatable
             ? $action
             : ModulePermissionAction::from($action);
 
-        if ($moduleKey === AdminModule::Members->value && $this->isMainMember()) {
+        if ($this->isMainMember() && $this->isMembersModuleSlug($moduleKey)) {
             return true;
+        }
+
+        $moduleRecord = Module::query()->where('slug', $moduleKey)->first();
+
+        if ($moduleRecord && ! $moduleRecord->is_permission_target) {
+            return $this->canOnAdminModuleGroup($moduleKey, $permissionAction);
         }
 
         if ($this->hasCommitteeRole()) {
             return app(ModulePermissionService::class)->roleCanOnModule(
                 (string) $this->committee_role,
                 $moduleKey,
+                $permissionAction,
+            );
+        }
+
+        return false;
+    }
+
+    public function canOnAdminModuleGroup(string $parentSlug, ModulePermissionAction|string $action = 'read'): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $permissionAction = $action instanceof ModulePermissionAction
+            ? $action
+            : ModulePermissionAction::from($action);
+
+        if ($parentSlug === AdminModule::Members->value && $this->isMainMember()) {
+            return true;
+        }
+
+        if ($this->hasCommitteeRole()) {
+            return app(ModulePermissionService::class)->roleCanOnModuleGroup(
+                (string) $this->committee_role,
+                $parentSlug,
                 $permissionAction,
             );
         }
@@ -276,7 +316,13 @@ class User extends Authenticatable
             return false;
         }
 
-        return $this->canOnAdminModule(AdminModule::Users, $action);
+        $permissionAction = $action instanceof ModulePermissionAction
+            ? $action
+            : ModulePermissionAction::from($action);
+
+        $moduleSlug = $permissionAction === ModulePermissionAction::Create ? 'users_add' : 'users_all';
+
+        return $this->canOnAdminModule($moduleSlug, $permissionAction);
     }
 
     /** @see Gate ability `members.manage` */
@@ -289,7 +335,13 @@ class User extends Authenticatable
             return false;
         }
 
-        if (! $this->canOnAdminModule(AdminModule::Members, $action)) {
+        $permissionAction = $action instanceof ModulePermissionAction
+            ? $action
+            : ModulePermissionAction::from($action);
+
+        $moduleSlug = $permissionAction === ModulePermissionAction::Create ? 'members_add' : 'members_all';
+
+        if (! $this->canOnAdminModule($moduleSlug, $permissionAction)) {
             return false;
         }
 
@@ -298,5 +350,14 @@ class User extends Authenticatable
         }
 
         return true;
+    }
+
+    private function isMembersModuleSlug(string $moduleKey): bool
+    {
+        return in_array($moduleKey, [
+            AdminModule::Members->value,
+            'members_all',
+            'members_add',
+        ], true);
     }
 }

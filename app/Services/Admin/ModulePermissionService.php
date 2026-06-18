@@ -17,26 +17,43 @@ class ModulePermissionService
 
     public function screenData(): array
     {
-        $modules = Module::query()
+        $parents = Module::query()
+            ->with(['children' => fn ($query) => $query->where('is_permission_target', true)->orderBy('sort_order')->orderBy('name')])
+            ->whereNull('parent_id')
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get(['id', 'slug', 'name', 'description', 'is_system']);
+            ->get();
+
+        $permissionModules = Module::query()
+            ->where('is_permission_target', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        $moduleGroups = $parents->map(function (Module $parent) {
+            $children = $parent->is_permission_target
+                ? collect([$parent])
+                : $parent->children;
+
+            return [
+                'parent' => [
+                    'id' => $parent->id,
+                    'slug' => $parent->slug,
+                    'name' => $parent->name,
+                    'description' => $parent->description ?? '',
+                    'is_group_header' => ! $parent->is_permission_target,
+                ],
+                'children' => $children->map(fn (Module $child) => $this->mapPermissionModule($child))->values()->all(),
+            ];
+        })->filter(fn (array $group) => $group['children'] !== [])->values()->all();
 
         $roles = Role::query()
             ->orderBy('name')
             ->get(['id', 'name', 'short_form', 'slug', 'is_system']);
 
-        $permissions = $this->loadPermissionsMap();
-
         return [
-            'modules' => $modules->map(fn ($module) => [
-                'id' => $module->id,
-                'slug' => $module->slug,
-                'name' => $module->name,
-                'description' => $module->description ?? '',
-                'is_system' => $module->is_system,
-                'settings_only' => $module->slug === 'settings',
-            ])->values()->all(),
+            'modules' => $permissionModules->map(fn (Module $module) => $this->mapPermissionModule($module))->values()->all(),
+            'module_groups' => $moduleGroups,
             'roles' => $roles->map(fn ($role) => [
                 'id' => $role->id,
                 'name' => $role->name,
@@ -45,7 +62,22 @@ class ModulePermissionService
                 'is_system' => $role->is_system,
                 'is_super_admin' => $role->slug === UserRole::SuperAdmin->value,
             ])->values()->all(),
-            'permissions' => $permissions,
+            'permissions' => $this->loadPermissionsMap(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapPermissionModule(Module $module): array
+    {
+        return [
+            'id' => $module->id,
+            'slug' => $module->slug,
+            'name' => $module->name,
+            'description' => $module->description ?? '',
+            'is_system' => $module->is_system,
+            'settings_only' => str_starts_with($module->slug, 'settings_'),
         ];
     }
 
@@ -59,15 +91,13 @@ class ModulePermissionService
             return;
         }
 
-        $settingsModuleId = Module::query()->where('slug', 'settings')->value('id');
-
         $normalized = collect($permissions)
-            ->map(function (array $permission) use ($settingsModuleId, $role) {
-                $moduleId = (int) ($permission['module_id'] ?? 0);
+            ->map(function (array $permission) use ($role) {
+                $module = Module::query()->find((int) ($permission['module_id'] ?? 0));
 
-                if ($settingsModuleId && $moduleId === (int) $settingsModuleId && $role->slug !== UserRole::SuperAdmin->value) {
+                if ($module && str_starts_with($module->slug, 'settings_') && $role->slug !== UserRole::SuperAdmin->value) {
                     return [
-                        'module_id' => $moduleId,
+                        'module_id' => $module->id,
                         'can_create' => false,
                         'can_read' => false,
                         'can_update' => false,
@@ -76,7 +106,7 @@ class ModulePermissionService
                 }
 
                 return [
-                    'module_id' => $moduleId,
+                    'module_id' => (int) ($permission['module_id'] ?? 0),
                     'can_create' => (bool) ($permission['can_create'] ?? false),
                     'can_read' => (bool) ($permission['can_read'] ?? false),
                     'can_update' => (bool) ($permission['can_update'] ?? false),
@@ -97,6 +127,28 @@ class ModulePermissionService
         return $this->modules->roleCanOnModule($roleSlug, $moduleSlug, $action);
     }
 
+    public function roleCanOnModuleGroup(string $roleSlug, string $parentSlug, ModulePermissionAction|string $action): bool
+    {
+        if ($roleSlug === UserRole::SuperAdmin->value) {
+            return true;
+        }
+
+        $parent = Module::query()->where('slug', $parentSlug)->whereNull('parent_id')->first();
+
+        if (! $parent) {
+            return false;
+        }
+
+        if ($parent->is_permission_target) {
+            return $this->roleCanOnModule($roleSlug, $parentSlug, $action);
+        }
+
+        return $parent->children()
+            ->where('is_permission_target', true)
+            ->pluck('slug')
+            ->contains(fn (string $childSlug) => $this->roleCanOnModule($roleSlug, $childSlug, $action));
+    }
+
     private function syncSuperAdminPermissions(Role $role): void
     {
         $allFlags = [
@@ -107,6 +159,7 @@ class ModulePermissionService
         ];
 
         $syncData = Module::query()
+            ->where('is_permission_target', true)
             ->pluck('id')
             ->mapWithKeys(fn ($id) => [(int) $id => $allFlags])
             ->all();

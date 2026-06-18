@@ -2,8 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\AdminModule;
 use App\Enums\ModulePermissionAction;
+use App\Models\Module;
 use App\Support\AdminGateAbility;
 use Closure;
 use Illuminate\Http\Request;
@@ -13,14 +13,13 @@ class EnsureAdminModuleAccess
 {
     public function handle(Request $request, Closure $next, string $module, string $action = 'read'): Response
     {
-        $adminModule = AdminModule::tryFrom($module);
         $permissionAction = ModulePermissionAction::tryFrom($action);
 
-        if (! $adminModule || ! $permissionAction) {
+        if (! $permissionAction || ! Module::query()->where('slug', $module)->exists()) {
             abort(403, __('messages.admin_module_forbidden'));
         }
 
-        $ability = AdminGateAbility::name($adminModule, $permissionAction);
+        $ability = AdminGateAbility::name($module, $permissionAction);
 
         if (! $request->user()?->can($ability)) {
             abort(403, __('messages.admin_module_forbidden'));

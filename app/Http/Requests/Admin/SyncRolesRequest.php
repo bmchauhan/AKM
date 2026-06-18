@@ -8,7 +8,7 @@ class SyncRolesRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('settings.update') ?? false;
+        return $this->user()?->can('settings_roles.update') ?? false;
     }
 
     public function rules(): array
@@ -20,6 +20,7 @@ class SyncRolesRequest extends FormRequest
             'roles.*.short_form' => ['required', 'string', 'max:20', 'regex:/^[A-Z0-9]+$/'],
             'roles.*.slug' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/'],
             'roles.*.description' => ['nullable', 'string', 'max:255'],
+            'roles.*.is_leadership' => ['nullable', 'boolean'],
             'deleted_ids' => ['nullable', 'array'],
             'deleted_ids.*' => ['integer', 'exists:roles,id'],
         ];

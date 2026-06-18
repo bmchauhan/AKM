@@ -8,7 +8,7 @@ class HouseholdMembersRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('users.read') ?? false;
+        return $this->user()?->can('users_all.read') ?? false;
     }
 
     public function rules(): array

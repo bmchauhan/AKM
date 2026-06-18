@@ -1,6 +1,7 @@
 @props([
     'title' => null,
     'pageTitle' => null,
+    'scripts' => null,
 ])
 
 @php
