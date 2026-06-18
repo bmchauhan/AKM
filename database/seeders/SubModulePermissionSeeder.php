@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\UserRole;
 use App\Models\Module;
 use App\Models\Role;
+use App\Services\Admin\ModulePermissionService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -14,6 +15,7 @@ class SubModulePermissionSeeder extends Seeder
     {
         $this->migrateLegacyParentPermissionsToChildren();
         $this->seedDefaultRolePermissions();
+        app(ModulePermissionService::class)->revokeSuperAdminOnlyModulesFromNonSuperAdmins();
     }
 
     private function migrateLegacyParentPermissionsToChildren(): void

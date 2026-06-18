@@ -10,6 +10,7 @@ use App\Enums\ModulePermissionAction;
 use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Services\Admin\ModulePermissionService;
+use App\Support\SuperAdminOnlyModules;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -242,6 +243,11 @@ class User extends Authenticatable
         }
 
         $moduleKey = $module instanceof AdminModule ? $module->value : $module;
+
+        if (SuperAdminOnlyModules::isSuperAdminOnlySlug($moduleKey)) {
+            return false;
+        }
+
         $permissionAction = $action instanceof ModulePermissionAction
             ? $action
             : ModulePermissionAction::from($action);
@@ -271,6 +277,10 @@ class User extends Authenticatable
     {
         if ($this->isSuperAdmin()) {
             return true;
+        }
+
+        if (SuperAdminOnlyModules::isSuperAdminOnlySlug($parentSlug)) {
+            return false;
         }
 
         $permissionAction = $action instanceof ModulePermissionAction

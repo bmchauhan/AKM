@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Models\Module;
 use App\Models\Role;
 use App\Repositories\Contracts\ModuleRepositoryInterface;
+use App\Support\SuperAdminOnlyModules;
 use Illuminate\Support\Facades\DB;
 
 class ModulePermissionService
@@ -77,8 +78,7 @@ class ModulePermissionService
             'name' => $module->name,
             'description' => $module->description ?? '',
             'is_system' => $module->is_system,
-            'settings_only' => str_starts_with($module->slug, 'settings_')
-                || str_starts_with($module->slug, 'landing_page_'),
+            'settings_only' => SuperAdminOnlyModules::isSuperAdminOnlySlug($module->slug),
         ];
     }
 
@@ -92,11 +92,13 @@ class ModulePermissionService
             return;
         }
 
+        $this->revokeSuperAdminOnlyModulesFromRole($role);
+
         $normalized = collect($permissions)
             ->map(function (array $permission) use ($role) {
                 $module = Module::query()->find((int) ($permission['module_id'] ?? 0));
 
-                if ($module && (str_starts_with($module->slug, 'settings_') || str_starts_with($module->slug, 'landing_page_')) && $role->slug !== UserRole::SuperAdmin->value) {
+                if ($module && SuperAdminOnlyModules::isSuperAdminOnlySlug($module->slug) && $role->slug !== UserRole::SuperAdmin->value) {
                     return [
                         'module_id' => $module->id,
                         'can_create' => false,
@@ -125,6 +127,10 @@ class ModulePermissionService
             return true;
         }
 
+        if (SuperAdminOnlyModules::isSuperAdminOnlySlug($moduleSlug)) {
+            return false;
+        }
+
         return $this->modules->roleCanOnModule($roleSlug, $moduleSlug, $action);
     }
 
@@ -132,6 +138,10 @@ class ModulePermissionService
     {
         if ($roleSlug === UserRole::SuperAdmin->value) {
             return true;
+        }
+
+        if (SuperAdminOnlyModules::isSuperAdminOnlySlug($parentSlug)) {
+            return false;
         }
 
         $parent = Module::query()->where('slug', $parentSlug)->whereNull('parent_id')->first();
@@ -166,6 +176,34 @@ class ModulePermissionService
             ->all();
 
         $role->modules()->sync($syncData);
+    }
+
+    public function revokeSuperAdminOnlyModulesFromNonSuperAdmins(): void
+    {
+        $superAdmin = Role::query()->where('slug', UserRole::SuperAdmin->value)->first();
+
+        Role::query()
+            ->when($superAdmin, fn ($query) => $query->where('id', '!=', $superAdmin->id))
+            ->each(fn (Role $role) => $this->revokeSuperAdminOnlyModulesFromRole($role));
+    }
+
+    private function revokeSuperAdminOnlyModulesFromRole(Role $role): void
+    {
+        if ($role->slug === UserRole::SuperAdmin->value) {
+            return;
+        }
+
+        $moduleIds = Module::query()
+            ->where('is_permission_target', true)
+            ->get(['id', 'slug'])
+            ->filter(fn (Module $module) => SuperAdminOnlyModules::isSuperAdminOnlySlug($module->slug))
+            ->pluck('id');
+
+        if ($moduleIds->isEmpty()) {
+            return;
+        }
+
+        $role->modules()->detach($moduleIds);
     }
 
     private function loadPermissionsMap(): array
