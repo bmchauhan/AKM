@@ -5,9 +5,8 @@
                 {{ __('messages.copyright', ['year' => date('Y')]) }}
             </p>
             <div class="flex gap-6">
-                <a href="#" class="text-sm text-[#E6EBF4]/70 transition hover:text-[#E6C280]">{{ __('messages.privacy') }}</a>
-                <a href="#" class="text-sm text-[#E6EBF4]/70 transition hover:text-[#E6C280]">{{ __('messages.terms') }}</a>
-                <a href="#" class="text-sm text-[#E6EBF4]/70 transition hover:text-[#E6C280]">{{ __('messages.contact') }}</a>
+                <a href="{{ route('privacy') }}" class="text-sm text-[#E6EBF4]/70 transition hover:text-[#E6C280]">{{ __('messages.privacy') }}</a>
+                <a href="{{ route('terms') }}" class="text-sm text-[#E6EBF4]/70 transition hover:text-[#E6C280]">{{ __('messages.terms') }}</a>
             </div>
         </div>
     </div>

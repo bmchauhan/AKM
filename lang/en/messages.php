@@ -527,6 +527,68 @@ return [
     'toggle_sidebar' => 'Toggle sidebar',
     'privacy' => 'Privacy',
     'terms' => 'Terms',
+    'privacy_page_title' => 'Privacy Policy',
+    'privacy_page_subtitle' => 'How अक्षरयुग FamilyGroup collects, uses, and protects resident information on this website and in the community portal.',
+    'privacy_last_updated' => 'Last updated: June 2026',
+    'privacy_sections' => [
+        [
+            'title' => 'Information We Collect',
+            'body' => 'We collect information you provide when registering as a resident or family member, including name, contact details, house number, and documents uploaded for verification. We also collect usage data such as login times and pages visited within the admin portal to keep the platform secure.',
+        ],
+        [
+            'title' => 'How We Use Your Information',
+            'body' => 'Your information is used to manage society records, maintenance accounts, committee communications, and public directory listings you approve. We do not sell personal data to third parties. Information shown on public pages—such as committee roles—is limited to what the management team has approved for display.',
+        ],
+        [
+            'title' => 'Data Sharing',
+            'body' => 'Resident data is shared only with authorised committee members and service providers who need it to perform society duties—for example, finance records for treasurers or maintenance details for assigned staff. Emergency contacts listed in the Useful Directory are published intentionally for community benefit.',
+        ],
+        [
+            'title' => 'Data Security',
+            'body' => 'We apply access controls, role-based permissions, and secure authentication to protect resident records. Only users with appropriate roles can view sensitive financial or personal data. Please keep your login credentials confidential and notify the management office if you suspect unauthorised access.',
+        ],
+        [
+            'title' => 'Your Rights',
+            'body' => 'Residents may request correction of inaccurate profile information through the admin portal or management office. You may ask what data we hold about your household and request removal of optional public listings where applicable, subject to legal and society record-keeping requirements.',
+        ],
+        [
+            'title' => 'Contact',
+            'body' => 'For privacy-related questions, contact the management office during office hours or reach the committee through the Useful Directory.',
+        ],
+    ],
+    'terms_page_title' => 'Terms of Use',
+    'terms_page_subtitle' => 'Rules for using the अक्षरयुग FamilyGroup website and resident portal.',
+    'terms_last_updated' => 'Last updated: June 2026',
+    'terms_sections' => [
+        [
+            'title' => 'Acceptance of Terms',
+            'body' => 'By accessing this website or logging into the resident portal, you agree to these Terms of Use and to follow society rules and resolutions. If you do not agree, please do not use the platform.',
+        ],
+        [
+            'title' => 'Permitted Use',
+            'body' => 'The portal is provided for legitimate society purposes: viewing notices, managing household records, paying maintenance where enabled, and accessing community resources. You must not misuse the system, attempt unauthorised access, or interfere with other residents\' data.',
+        ],
+        [
+            'title' => 'Accounts & Responsibilities',
+            'body' => 'Login credentials are personal. Main members are responsible for information submitted for their household. You must provide accurate details and update changes promptly. The management team may suspend accounts that violate these terms or society bylaws.',
+        ],
+        [
+            'title' => 'Community Content',
+            'body' => 'News, directory listings, and committee information are published for residents. Community-submitted content may be edited or removed by authorised administrators. Do not post false, offensive, or misleading information through any society channel.',
+        ],
+        [
+            'title' => 'Financial Information',
+            'body' => 'Maintenance balances, receipts, and finance summaries are provided for convenience. Official records maintained by the finance committee remain authoritative. Disputes should be raised with the finance committee in writing.',
+        ],
+        [
+            'title' => 'Limitation of Liability',
+            'body' => 'The platform is provided on an "as is" basis. अक्षरयुग FamilyGroup and its committee are not liable for temporary outages, third-party service failures, or losses arising from misuse of published directory contacts. Always verify emergency and service numbers independently.',
+        ],
+        [
+            'title' => 'Changes',
+            'body' => 'These terms may be updated when features or legal requirements change. Continued use after updates constitutes acceptance. Material changes will be communicated through the website or society notices where practicable.',
+        ],
+    ],
     'directory' => 'Directory',
     'directory_eyebrow' => 'For Family Members',
     'directory_title' => 'Community Directory',

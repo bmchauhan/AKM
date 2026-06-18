@@ -32,6 +32,8 @@ Route::get('/', function () {
 Route::view('/home-old', 'frontend.home-old')->name('home.old');
 
 Route::view('/news', 'frontend.news')->name('news');
+Route::view('/privacy', 'frontend.privacy')->name('privacy');
+Route::view('/terms', 'frontend.terms')->name('terms');
 Route::get('/our-committee', CommitteeController::class)->name('committee');
 Route::get('/useful-directory', FrontendUsefulDirectoryController::class)->name('useful-directory');
 
