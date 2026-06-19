@@ -8,7 +8,7 @@
     <button
         type="button"
         @click="open = !open"
-        class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full ring-2 ring-[#E6C280]/50 transition hover:ring-[#E6C280]"
+        class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full transition hover:ring-2 hover:ring-[#E6C280]/60"
         aria-label="{{ __('messages.profile_menu') }}"
         aria-haspopup="true"
         :aria-expanded="open"

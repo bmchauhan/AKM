@@ -1,12 +1,26 @@
-<aside class="flex w-64 shrink-0 flex-col border-r border-[#E6C280]/30 bg-[#080D21]">
-  <div class="flex h-16 items-center border-b border-[#E6C280]/30 px-6">
-    <a href="{{ route('admin.dashboard') }}" class="flex flex-col">
-      <span class="text-base font-semibold leading-relaxed text-[#E6EBF4]">{{ __('messages.brand_name') }}</span>
-      <span class="text-xs leading-relaxed text-[#E6C280]">{{ __('messages.admin_panel') }}</span>
+<aside
+  class="fixed inset-y-0 left-0 z-40 flex h-full w-64 max-w-[85vw] shrink-0 flex-col border-r border-[#E6C280]/30 bg-[#080D21] transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:h-auto lg:max-w-none lg:translate-x-0 lg:transition-none"
+  :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+  @click="if ($event.target.closest('a, button[type=submit]')) sidebarOpen = false"
+>
+  <div class="flex h-16 shrink-0 items-center justify-between border-b border-[#E6C280]/30 px-4 lg:px-6">
+    <a href="{{ route('admin.dashboard') }}" class="flex min-w-0 flex-col">
+      <span class="truncate text-base font-semibold leading-relaxed text-[#E6EBF4]">{{ __('messages.brand_name') }}</span>
+      <span class="truncate text-xs leading-relaxed text-[#E6C280]">{{ __('messages.admin_panel') }}</span>
     </a>
+    <button
+      type="button"
+      @click.stop="sidebarOpen = false"
+      class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded text-[#E6EBF4]/80 transition hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4] lg:hidden"
+      aria-label="{{ __('messages.close_sidebar') }}"
+    >
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
   </div>
 
-  <nav class="flex-1 space-y-1 p-4">
+  <nav class="flex-1 space-y-1 overflow-y-auto p-4">
     <a
       href="{{ route('admin.dashboard') }}"
       class="flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.dashboard') ? 'bg-[#AB1E23] text-[#E6EBF4]' : 'text-[#E6EBF4]/70 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
