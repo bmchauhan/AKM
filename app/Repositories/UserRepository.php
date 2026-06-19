@@ -9,6 +9,7 @@ use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class UserRepository implements UserRepositoryInterface
 {
@@ -90,7 +91,9 @@ class UserRepository implements UserRepositoryInterface
 
     public function delete(User $user): void
     {
-        $user->delete();
+        DB::transaction(function () use ($user): void {
+            $user->delete();
+        });
     }
 
     public function emailExists(string $email, ?int $exceptUserId = null): bool

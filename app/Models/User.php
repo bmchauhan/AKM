@@ -68,6 +68,19 @@ class User extends Authenticatable
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user): void {
+            if ($user->isForceDeleting() || ! $user->isMainMember()) {
+                return;
+            }
+
+            $user->householdMembers()
+                ->get()
+                ->each(fn (User $member) => $member->delete());
+        });
+    }
+
     public function roleRecord(): BelongsTo
     {
         return $this->belongsTo(Role::class, 'role', 'slug');
@@ -95,6 +108,26 @@ class User extends Authenticatable
                 MembershipRole::FamilyMember->value,
                 MembershipRole::RentalMember->value,
             ]);
+    }
+
+    public function financeCollections(): HasMany
+    {
+        return $this->hasMany(FinanceCollection::class, 'main_member_id');
+    }
+
+    public function maintenanceLedgerEntries(): HasMany
+    {
+        return $this->hasMany(MaintenanceMonthlyEntry::class, 'main_member_id');
+    }
+
+    public function hasFinancePaymentHistory(): bool
+    {
+        if (! $this->isMainMember()) {
+            return false;
+        }
+
+        return $this->financeCollections()->withTrashed()->exists()
+            || $this->maintenanceLedgerEntries()->exists();
     }
 
     public function roleLabel(): string

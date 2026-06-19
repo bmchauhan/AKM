@@ -227,6 +227,39 @@ body {
     background: #fff;
 }
 
+.akm-swal-btn-primary {
+    background: #080d21;
+    color: #e6ebf4;
+}
+
+.akm-swal-btn-primary:hover {
+    background: #ab1e23;
+}
+
+.akm-swal-extra-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.akm-swal-action-link {
+    display: inline-flex;
+    justify-content: center;
+    border-radius: 0.5rem;
+    background: #e6ebf4;
+    color: #080d21;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+}
+
+.akm-swal-action-link:hover {
+    background: #fff;
+}
+
 div:where(.swal2-container) {
     z-index: 20000 !important;
 }

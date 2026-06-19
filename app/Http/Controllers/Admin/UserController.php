@@ -14,10 +14,12 @@ use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\User;
 use App\Services\Admin\AdminMemberService;
 use App\Services\Admin\AdminUserService;
+use App\Support\SwalDialog;
 use App\Support\Toast;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -172,7 +174,30 @@ class UserController extends Controller
     {
         $user = User::query()->findOrFail($request->integer('user_id'));
 
-        $this->users->delete($user, auth()->user());
+        try {
+            $this->users->delete($user, auth()->user());
+        } catch (ValidationException $exception) {
+            $errors = $exception->errors();
+
+            if (isset($errors['user_finance_history'])) {
+                SwalDialog::alert([
+                    'title' => __('messages.swal_payment_history_title'),
+                    'message' => $errors['user_finance_history'][0],
+                    'icon' => 'warning',
+                    'code' => 'user_finance_history',
+                    'confirm_text' => __('messages.swal_understood'),
+                ]);
+            } else {
+                SwalDialog::alert([
+                    'title' => __('messages.swal_delete_blocked_title'),
+                    'message' => collect($errors)->flatten()->first() ?? __('messages.users_delete_failed'),
+                    'icon' => 'warning',
+                    'confirm_text' => __('messages.swal_understood'),
+                ]);
+            }
+
+            return redirect()->route('admin.users.index');
+        }
 
         Toast::success(__('messages.users_deleted'));
 

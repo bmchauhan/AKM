@@ -27,6 +27,7 @@
 </head>
 <body class="locale-{{ app()->getLocale() }} min-h-screen overflow-x-hidden bg-[#ECEAE1] text-[#0F141E] antialiased">
     <x-common.toast-bridge />
+    <x-common.swal-bridge />
 
     <div
         class="flex min-h-screen"

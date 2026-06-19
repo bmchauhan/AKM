@@ -338,6 +338,12 @@ class AdminUserService
             ]);
         }
 
+        if ($user->isMainMember() && $user->hasFinancePaymentHistory()) {
+            throw ValidationException::withMessages([
+                'user_finance_history' => [__('messages.users_delete_finance_history')],
+            ]);
+        }
+
         $this->users->delete($user);
     }
 
