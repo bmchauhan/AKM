@@ -368,6 +368,15 @@
           {{ __('messages.settings_roles') }}
         </a>
         @endcan
+        @can('settings_email.read')
+        <a
+          href="{{ route('admin.settings.email.index') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.settings.email.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.settings.email.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.settings_email') }}
+        </a>
+        @endcan
       </div>
     </div>
     @endcan

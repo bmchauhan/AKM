@@ -110,7 +110,7 @@ class MemberController extends Controller
     {
         $actor = auth()->user();
 
-        $this->members->create(
+        $result = $this->members->create(
             $actor,
             $request->validated(),
             $request->file('id_proof'),
@@ -121,7 +121,19 @@ class MemberController extends Controller
             $this->members->rememberSelectedMainMember($actor, $request->integer('linked_main_member_id'));
         }
 
-        Toast::success(__('messages.members_created'));
+        if ($result->credentialsEmailed) {
+            Toast::success(__('messages.members_created_with_email'));
+        } elseif ($result->credentialsSkippedDueToDisabled) {
+            Toast::success(__('messages.members_created_emails_disabled'));
+        } elseif ($result->credentialsEmailedToMainMember) {
+            Toast::success(__('messages.members_created_credentials_to_main_member'));
+        } elseif ($result->mainMemberCredentialsAttempted) {
+            Toast::warning(__('messages.members_created_main_member_email_failed'));
+        } elseif (filled($result->user->email)) {
+            Toast::warning(__('messages.members_created_email_failed'));
+        } else {
+            Toast::success(__('messages.members_created_no_email'));
+        }
 
         return redirect()->route('admin.members.index');
     }

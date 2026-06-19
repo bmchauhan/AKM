@@ -81,14 +81,22 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        $this->users->create(
+        $result = $this->users->create(
             auth()->user(),
             $request->validated(),
             $request->file('id_proof'),
             $request->file('profile_image'),
         );
 
-        Toast::success(__('messages.users_created'));
+        if ($result->credentialsEmailed) {
+            Toast::success(__('messages.users_created_with_email'));
+        } elseif ($result->credentialsSkippedDueToDisabled) {
+            Toast::success(__('messages.users_created_emails_disabled'));
+        } elseif (filled($result->user->email)) {
+            Toast::warning(__('messages.users_created_email_failed'));
+        } else {
+            Toast::success(__('messages.users_created_no_email'));
+        }
 
         return redirect()->route('admin.users.index');
     }

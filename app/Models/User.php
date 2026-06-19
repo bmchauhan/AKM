@@ -116,6 +116,33 @@ class User extends Authenticatable
         return $parts !== [] ? implode(' · ', $parts) : '—';
     }
 
+    public function roleLabelWithShortForm(): string
+    {
+        if ($this->isSuperAdmin()) {
+            $name = $this->roleRecord?->name ?? 'Super Admin';
+            $short = $this->roleRecord?->short_form ?? 'SA';
+
+            return $name.' ('.$short.')';
+        }
+
+        $parts = [];
+
+        if (filled($this->membership_type)) {
+            $membership = MembershipRole::from($this->membership_type);
+            $parts[] = $membership->label().' ('.$membership->shortForm().')';
+        }
+
+        if (filled($this->committee_role)) {
+            $name = $this->committeeRoleRecord?->name
+                ?? ucwords(str_replace('_', ' ', $this->committee_role));
+            $short = $this->committeeRoleRecord?->short_form
+                ?? strtoupper(substr(str_replace('_', '', $this->committee_role), 0, 4));
+            $parts[] = $name.' ('.$short.')';
+        }
+
+        return $parts !== [] ? implode(' · ', $parts) : '—';
+    }
+
     public static function syncLegacyRole(?string $membershipType, ?string $committeeRole, bool $isSuperAdmin = false): string
     {
         if ($isSuperAdmin) {

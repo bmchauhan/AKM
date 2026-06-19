@@ -5,9 +5,10 @@ namespace App\Http\Requests\Admin;
 use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
+use App\Support\MemberHouseSync;
+use App\Support\UserEmailRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class StoreMemberRequest extends FormRequest
 {
@@ -47,9 +48,10 @@ class StoreMemberRequest extends FormRequest
             'house_number' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
             'mobile_number' => ['required', 'string', 'max:20'],
             'alternate_number' => ['nullable', 'string', 'max:20'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'username' => ['required', 'string', 'max:50', 'regex:/^[a-zA-Z0-9._-]+$/', 'unique:users,username'],
-            'password' => ['nullable', 'confirmed', Password::defaults()],
+            'email' => UserEmailRules::rules(
+                exceptUserId: null,
+                membershipType: $this->input('membership_type'),
+            ),
             'id_proof' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:1024'],
             'profile_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
         ];
@@ -82,12 +84,18 @@ class StoreMemberRequest extends FormRequest
     {
         $user = $this->user();
 
+        $this->merge([
+            'email' => UserEmailRules::normalize($this->input('email')),
+        ]);
+
         if ($user?->canChooseHouseholdScope()) {
             if ($this->input('household_scope', 'self') === 'self') {
                 $this->merge([
                     'linked_main_member_id' => $user->id,
                 ]);
             }
+
+            MemberHouseSync::mergeFromMainMember($this);
 
             return;
         }
@@ -97,6 +105,8 @@ class StoreMemberRequest extends FormRequest
                 'linked_main_member_id' => $user->id,
             ]);
         }
+
+        MemberHouseSync::mergeFromMainMember($this);
     }
 
     private function requiresMainMemberSelection(): bool

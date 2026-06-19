@@ -5,11 +5,15 @@ namespace App\Services\Admin;
 use App\Enums\MembershipRole;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Services\Auth\UserAccountProvisioningService;
+use App\Services\Admin\EmailSettingsService;
+use App\Support\CreatedUserResult;
+use App\Support\UserEmailRules;
+use App\Support\UsernameGenerator;
 use App\Traits\HandlesUploads;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AdminMemberService
@@ -22,6 +26,9 @@ class AdminMemberService
 
     public function __construct(
         private readonly UserRepositoryInterface $users,
+        private readonly UserAccountProvisioningService $provisioning,
+        private readonly UsernameGenerator $usernameGenerator,
+        private readonly EmailSettingsService $emailSettings,
     ) {}
 
     public function listForScreen(User $actor, ?int $mainMemberId = null): array
@@ -203,10 +210,11 @@ class AdminMemberService
         Gate::forUser($actor)->authorize('members.manage', [$target, $action]);
     }
 
-    public function create(User $actor, array $data, ?UploadedFile $idProof, ?UploadedFile $profileImage): User
+    public function create(User $actor, array $data, ?UploadedFile $idProof, ?UploadedFile $profileImage): CreatedUserResult
     {
         $mainMember = $this->resolveMainMember($actor, (int) $data['linked_main_member_id']);
-        $payload = $this->buildPayload($data, $mainMember);
+        $plainPassword = $this->provisioning->generatePassword();
+        $payload = $this->buildPayload($data, $mainMember, null, $plainPassword);
 
         if ($idProof) {
             $payload['id_proof_path'] = $this->storePublicUpload($idProof, 'users/id-proofs');
@@ -216,7 +224,34 @@ class AdminMemberService
             $payload['profile_image_path'] = $this->storePublicUpload($profileImage, 'users/profile-images');
         }
 
-        return $this->users->create($payload);
+        $user = $this->users->create($payload);
+        $emailsEnabled = $this->emailSettings->emailsEnabled();
+
+        if (filled($user->email)) {
+            $credentialsEmailed = $this->provisioning->notifyCredentials($user, $plainPassword, $actor);
+
+            return new CreatedUserResult(
+                $user,
+                credentialsEmailed: $credentialsEmailed,
+                credentialsSkippedDueToDisabled: ! $emailsEnabled,
+            );
+        }
+
+        $mainMemberCredentialsAttempted = filled($mainMember->email);
+        $credentialsEmailedToMainMember = $mainMemberCredentialsAttempted
+            && $this->provisioning->notifyFamilyMemberCredentialsToMainMember(
+                $user,
+                $mainMember,
+                $plainPassword,
+                $actor,
+            );
+
+        return new CreatedUserResult(
+            $user,
+            credentialsEmailedToMainMember: $credentialsEmailedToMainMember,
+            mainMemberCredentialsAttempted: $mainMemberCredentialsAttempted,
+            credentialsSkippedDueToDisabled: $mainMemberCredentialsAttempted && ! $emailsEnabled,
+        );
     }
 
     public function update(User $actor, User $member, array $data, ?UploadedFile $idProof, ?UploadedFile $profileImage): User
@@ -298,11 +333,13 @@ class AdminMemberService
         return $mainMember;
     }
 
-    private function buildPayload(array $data, User $mainMember, ?User $member = null): array
+    private function buildPayload(array $data, User $mainMember, ?User $member = null, ?string $plainPassword = null): array
     {
         $firstName = trim($data['first_name']);
         $middleName = filled($data['middle_name'] ?? null) ? trim($data['middle_name']) : null;
         $lastName = trim($data['last_name']);
+        $houseType = $mainMember->house_type?->value;
+        $houseNumber = trim($mainMember->house_number ?? '');
 
         $payload = [
             'first_name' => $firstName,
@@ -311,22 +348,29 @@ class AdminMemberService
             'name' => trim(collect([$firstName, $middleName, $lastName])->filter()->implode(' ')),
             'caste' => filled($data['caste'] ?? null) ? trim($data['caste']) : null,
             'gender' => $data['gender'],
-            'house_type' => $data['house_type'] ?? $mainMember->house_type?->value,
-            'house_number' => trim($data['house_number'] ?? $mainMember->house_number ?? ''),
+            'house_type' => $houseType,
+            'house_number' => $houseNumber,
             'mobile_number' => trim($data['mobile_number']),
             'alternate_number' => filled($data['alternate_number'] ?? null) ? trim($data['alternate_number']) : null,
-            'email' => trim($data['email']),
-            'username' => trim($data['username']),
+            'email' => UserEmailRules::normalize($data['email'] ?? null),
+            'username' => $member
+                ? $member->username
+                : $this->usernameGenerator->generate(
+                    $firstName,
+                    $data['gender'],
+                    $houseType,
+                    $houseNumber,
+                ),
             'membership_type' => $membershipType = $this->resolveMembershipRole($data),
             'committee_role' => null,
             'role' => User::syncLegacyRole($membershipType, null),
             'linked_main_member_id' => $mainMember->id,
         ];
 
-        if (filled($data['password'] ?? null)) {
+        if ($plainPassword !== null) {
+            $payload['password'] = $plainPassword;
+        } elseif ($member && filled($data['password'] ?? null)) {
             $payload['password'] = $data['password'];
-        } elseif (! $member) {
-            $payload['password'] = Str::password(12);
         }
 
         return $payload;

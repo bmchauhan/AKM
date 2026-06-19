@@ -8,10 +8,14 @@ use App\Enums\UserRole;
 use App\Models\Role;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Services\Auth\UserAccountProvisioningService;
+use App\Services\Admin\EmailSettingsService;
+use App\Support\CreatedUserResult;
+use App\Support\UserEmailRules;
+use App\Support\UsernameGenerator;
 use App\Traits\HandlesUploads;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AdminUserService
@@ -25,6 +29,9 @@ class AdminUserService
     public function __construct(
         private readonly UserRepositoryInterface $users,
         private readonly CommitteeRoleRegistry $committeeRoles,
+        private readonly UserAccountProvisioningService $provisioning,
+        private readonly UsernameGenerator $usernameGenerator,
+        private readonly EmailSettingsService $emailSettings,
     ) {}
 
     public function rememberEditingUser(User $user): void
@@ -258,12 +265,13 @@ class AdminUserService
         Gate::forUser($actor)->authorize('users.manage', [$target, $action]);
     }
 
-    public function create(User $actor, array $data, ?UploadedFile $idProof, ?UploadedFile $profileImage): User
+    public function create(User $actor, array $data, ?UploadedFile $idProof, ?UploadedFile $profileImage): CreatedUserResult
     {
         $this->assertAssignableMembership($actor, $data['membership_type']);
         $this->assertAssignableCommittee($actor, $data['membership_type'], $data['committee_role'] ?? null);
 
-        $payload = $this->buildPayload($data);
+        $plainPassword = $this->provisioning->generatePassword();
+        $payload = $this->buildPayload($data, null, $plainPassword);
 
         if ($idProof) {
             $payload['id_proof_path'] = $this->storePublicUpload($idProof, 'users/id-proofs');
@@ -273,7 +281,15 @@ class AdminUserService
             $payload['profile_image_path'] = $this->storePublicUpload($profileImage, 'users/profile-images');
         }
 
-        return $this->users->create($payload);
+        $user = $this->users->create($payload);
+        $emailsEnabled = $this->emailSettings->emailsEnabled();
+        $credentialsEmailed = $this->provisioning->notifyCredentials($user, $plainPassword, $actor);
+
+        return new CreatedUserResult(
+            $user,
+            credentialsEmailed: $credentialsEmailed,
+            credentialsSkippedDueToDisabled: filled($user->email) && ! $emailsEnabled,
+        );
     }
 
     public function update(User $actor, User $user, array $data, ?UploadedFile $idProof, ?UploadedFile $profileImage): User
@@ -328,7 +344,7 @@ class AdminUserService
         $this->users->delete($user);
     }
 
-    private function buildPayload(array $data, ?User $user = null): array
+    private function buildPayload(array $data, ?User $user = null, ?string $plainPassword = null): array
     {
         $firstName = trim($data['first_name']);
         $middleName = filled($data['middle_name'] ?? null) ? trim($data['middle_name']) : null;
@@ -351,17 +367,24 @@ class AdminUserService
             'house_number' => trim($data['house_number']),
             'mobile_number' => trim($data['mobile_number']),
             'alternate_number' => filled($data['alternate_number'] ?? null) ? trim($data['alternate_number']) : null,
-            'email' => trim($data['email']),
-            'username' => trim($data['username']),
+            'email' => UserEmailRules::normalize($data['email'] ?? null),
+            'username' => $user
+                ? $user->username
+                : $this->usernameGenerator->generate(
+                    $firstName,
+                    $data['gender'],
+                    $data['house_type'],
+                    trim($data['house_number']),
+                ),
             'membership_type' => $membershipType,
             'committee_role' => $committeeRole,
             'role' => User::syncLegacyRole($membershipType, $committeeRole),
         ];
 
-        if (filled($data['password'] ?? null)) {
+        if ($plainPassword !== null) {
+            $payload['password'] = $plainPassword;
+        } elseif ($user && filled($data['password'] ?? null)) {
             $payload['password'] = $data['password'];
-        } elseif (! $user) {
-            $payload['password'] = Str::password(12);
         }
 
         return $payload;

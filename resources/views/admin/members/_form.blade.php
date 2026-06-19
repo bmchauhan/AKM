@@ -16,10 +16,6 @@
         'value' => $g->value,
         'label' => $g->label(),
     ])->all();
-    $houseTypeOptions = collect(\App\Enums\HouseType::cases())->map(fn ($h) => [
-        'value' => $h->value,
-        'label' => $h->label(),
-    ])->all();
     $mainMemberOptions = collect($mainMembers)->map(fn ($m) => [
         'value' => $m['value'],
         'label' => $m['label'],
@@ -37,6 +33,11 @@
             : $actorMainMemberId,
     );
     $selectedMembershipType = old('membership_type', $member?->membership_type ?? $member?->role ?? \App\Enums\MembershipRole::FamilyMember->value);
+    $initialHouseType = old('house_type', $member?->house_type?->value ?? $actor?->house_type?->value ?? '');
+    $initialHouseNumber = old('house_number', $member?->house_number ?? $actor?->house_number ?? '');
+    $initialHouseDisplay = filled($initialHouseType) && filled($initialHouseNumber)
+        ? trim($initialHouseType.' '.$initialHouseNumber)
+        : ($member?->houseLabel() ?? $actor?->houseLabel() ?? '');
 @endphp
 
 <div
@@ -46,20 +47,28 @@
         householdScope: @js($defaultHouseholdScope),
         actorMainMemberId: @js((int) $actorMainMemberId),
         selectedMainMemberId: @js((int) $selectedMainMemberId),
+        houseTypeValue: @js($initialHouseType),
+        houseNumberValue: @js($initialHouseNumber),
+        houseDisplay: @js($initialHouseDisplay),
         applyHouseFromMainMember() {
             const targetId = this.householdScope === 'self'
                 ? this.actorMainMemberId
                 : Number(this.selectedMainMemberId);
             const match = this.mainMembers.find((item) => Number(item.value) === targetId);
             if (! match) return;
-            const houseType = document.getElementById('house_type');
-            const houseNumber = document.getElementById('house_number');
-            if (houseType && match.house_type) houseType.value = match.house_type;
-            if (houseNumber && match.house_number) houseNumber.value = match.house_number;
+            if (match.house_type) {
+                this.houseTypeValue = match.house_type;
+            }
+            if (match.house_number) {
+                this.houseNumberValue = match.house_number;
+            }
+            if (match.house_type && match.house_number) {
+                this.houseDisplay = `${match.house_type} ${match.house_number}`;
+            }
         }
     }"
     class="space-y-8"
-    x-init="applyHouseFromMainMember()"
+    x-init="applyHouseFromMainMember(); membershipType = document.getElementById('membership_type')?.value || membershipType"
     x-effect="applyHouseFromMainMember()"
 >
     <section class="space-y-4">
@@ -70,7 +79,7 @@
             :label="__('messages.members_type')"
             :options="$membershipTypes"
             :value="$selectedMembershipType"
-            x-model="membershipType"
+            x-on:change="membershipType = $event.target.value"
             required
         >
             <option value="">{{ __('messages.users_select_option') }}</option>
@@ -165,21 +174,12 @@
             </x-common.select>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2">
-            <x-common.select name="house_type" :label="__('messages.users_house_type')" :options="$houseTypeOptions" :value="old('house_type', $member?->house_type?->value)" required>
-                <option value="">{{ __('messages.users_select_option') }}</option>
-            </x-common.select>
-            <x-common.input
-                name="house_number"
-                type="text"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                :label="__('messages.users_house_number')"
-                :placeholder="__('messages.users_house_number_placeholder')"
-                :value="old('house_number', $member?->house_number)"
-                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                required
-            />
+        <div>
+            <input type="hidden" name="house_type" :value="houseTypeValue">
+            <input type="hidden" name="house_number" :value="houseNumberValue">
+            <p class="text-sm font-medium text-[#080D21]">{{ __('messages.users_house') }}</p>
+            <p class="mt-1 text-sm text-[#0F141E]" x-text="houseDisplay || '—'"></p>
+            <p class="mt-1 text-xs text-[#0F141E]/50">{{ __('messages.members_house_locked_hint') }}</p>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
@@ -201,23 +201,32 @@
             <input type="password" name="prevent_autofill_password" tabindex="-1" autocomplete="current-password" class="pointer-events-none absolute h-0 w-0 opacity-0" aria-hidden="true">
         @endunless
 
-        <div class="grid gap-4 sm:grid-cols-2">
-            <x-common.input name="email" type="email" :label="__('messages.users_email')" :value="old('email', $member?->email)" autocomplete="off" required />
-            <x-common.input name="username" :label="__('messages.users_username')" :value="old('username', $member?->username)" autocomplete="off" required />
-        </div>
-
-        <div class="grid gap-4 sm:grid-cols-2">
-            <x-common.password
-                name="password"
-                :label="$isEdit ? __('messages.users_password_optional') : __('messages.users_password')"
-                :placeholder="__('messages.users_password_placeholder')"
-                autocomplete="new-password"
-            />
-            <x-common.password name="password_confirmation" :label="__('messages.users_password_confirm')" autocomplete="new-password" />
+        <div @class(['grid gap-4', 'sm:grid-cols-2' => $isEdit])>
+            <div>
+                <x-common.input name="email" type="email" :label="__('messages.users_email')" :value="old('email', $member?->email)" autocomplete="off" />
+                <p class="mt-1.5 text-xs text-[#0F141E]/50">{{ __('messages.users_email_optional_hint') }}</p>
+            </div>
+            @if ($isEdit)
+                <x-admin.username-display :value="$member->username" />
+            @endif
         </div>
 
         @unless ($isEdit)
-            <p class="text-xs text-[#0F141E]/50">{{ __('messages.users_password_auto_hint') }}</p>
+            <p class="rounded-lg border border-[#E6EBF4] bg-[#E6EBF4]/50 px-4 py-3 text-sm leading-relaxed text-[#0F141E]/75">
+                {{ __('messages.members_password_auto_notice') }}
+                {{ ' ' }}
+                {{ __('messages.users_username_auto_notice_create') }}
+            </p>
+        @else
+            <div class="grid gap-4 sm:grid-cols-2">
+                <x-common.password
+                    name="password"
+                    :label="__('messages.users_password_optional')"
+                    :placeholder="__('messages.users_password_placeholder')"
+                    autocomplete="new-password"
+                />
+                <x-common.password name="password_confirmation" :label="__('messages.users_password_confirm')" autocomplete="new-password" />
+            </div>
         @endunless
     </section>
 </div>

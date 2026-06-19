@@ -5,6 +5,8 @@ namespace App\Http\Requests\Admin;
 use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
+use App\Support\MemberHouseSync;
+use App\Support\UserEmailRules;
 use App\Models\User;
 use App\Services\Admin\AdminMemberService;
 use Illuminate\Foundation\Http\FormRequest;
@@ -55,8 +57,10 @@ class UpdateMemberRequest extends FormRequest
             'house_number' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
             'mobile_number' => ['required', 'string', 'max:20'],
             'alternate_number' => ['nullable', 'string', 'max:20'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($memberId)],
-            'username' => ['required', 'string', 'max:50', 'regex:/^[a-zA-Z0-9._-]+$/', Rule::unique('users', 'username')->ignore($memberId)],
+            'email' => UserEmailRules::rules(
+                exceptUserId: $memberId ? (int) $memberId : null,
+                membershipType: $this->input('membership_type'),
+            ),
             'password' => ['nullable', 'confirmed', Password::defaults()],
             'id_proof' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:1024'],
             'profile_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
@@ -72,12 +76,18 @@ class UpdateMemberRequest extends FormRequest
     {
         $user = $this->user();
 
+        $this->merge([
+            'email' => UserEmailRules::normalize($this->input('email')),
+        ]);
+
         if ($user?->canChooseHouseholdScope()) {
             if ($this->input('household_scope', 'self') === 'self') {
                 $this->merge([
                     'linked_main_member_id' => $user->id,
                 ]);
             }
+
+            MemberHouseSync::mergeFromMainMember($this);
 
             return;
         }
@@ -87,6 +97,8 @@ class UpdateMemberRequest extends FormRequest
                 'linked_main_member_id' => $user->id,
             ]);
         }
+
+        MemberHouseSync::mergeFromMainMember($this);
     }
 
     private function requiresMainMemberSelection(): bool

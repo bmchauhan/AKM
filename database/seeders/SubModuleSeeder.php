@@ -31,6 +31,7 @@ class SubModuleSeeder extends Seeder
                 ['slug' => 'settings_modules', 'name_key' => 'settings_modules', 'sort_order' => 1],
                 ['slug' => 'settings_permissions', 'name_key' => 'settings_permissions', 'sort_order' => 2],
                 ['slug' => 'settings_roles', 'name_key' => 'settings_roles', 'sort_order' => 3],
+                ['slug' => 'settings_email', 'name_key' => 'settings_email', 'sort_order' => 4],
             ],
             'landing_page' => [
                 ['slug' => 'landing_page_directory_roles', 'name_key' => 'directory_roles', 'sort_order' => 1],

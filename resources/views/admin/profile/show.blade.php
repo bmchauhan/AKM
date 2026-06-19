@@ -1,6 +1,11 @@
 @php
     $avatarUrl = $user->profileImageUrl()
         ?? 'https://ui-avatars.com/api/?name='.urlencode($user->name).'&background=E6EBF4&color=080D21&size=128&bold=true';
+    $profileEmailRequired = \App\Support\UserEmailRules::requiresEmail(
+        $user->membership_type,
+        $user->committee_role,
+        $user->isSuperAdmin(),
+    );
 @endphp
 
 <x-layouts.admin :pageTitle="__('messages.profile_my')">
@@ -15,7 +20,7 @@
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wider text-[#AB1E23]">{{ __('messages.profile_my') }}</p>
                     <h2 class="mt-1 text-xl font-bold text-[#080D21]">{{ $user->fullName() }}</h2>
-                    <p class="mt-1 text-sm text-[#0F141E]/70">{{ $user->roleLabel() }}</p>
+                    <p class="mt-1 text-sm text-[#0F141E]/70">{{ $user->roleLabelWithShortForm() }}</p>
                 </div>
             </div>
             <x-common.button type="button" variant="secondary" :href="route('admin.password.edit')">
@@ -39,7 +44,12 @@
                     </div>
 
                     <div class="grid gap-4 sm:grid-cols-2">
-                        <x-common.input name="email" type="email" :label="__('messages.users_email')" :value="old('email', $user->email)" required />
+                        <div>
+                            <x-common.input name="email" type="email" :label="__('messages.users_email')" :value="old('email', $user->email)" :required="$profileEmailRequired" />
+                            @unless ($profileEmailRequired)
+                                <p class="mt-1.5 text-xs text-[#0F141E]/50">{{ __('messages.users_email_optional_hint') }}</p>
+                            @endunless
+                        </div>
                         <x-common.input name="mobile_number" :label="__('messages.users_mobile')" :value="old('mobile_number', $user->mobile_number)" required />
                     </div>
 
@@ -79,7 +89,7 @@
                     </div>
                     <div class="rounded-lg border border-[#E6EBF4] bg-white px-4 py-3">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-[#0F141E]/60">{{ __('messages.users_role') }}</dt>
-                        <dd class="mt-1 text-sm font-medium text-[#080D21]">{{ $user->roleLabel() }}</dd>
+                        <dd class="mt-1 text-sm font-medium text-[#080D21]">{{ $user->roleLabelWithShortForm() }}</dd>
                     </div>
                 </dl>
             </div>

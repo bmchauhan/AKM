@@ -5,10 +5,10 @@ namespace App\Http\Requests\Admin;
 use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
+use App\Support\UserEmailRules;
 use App\Services\Admin\AdminUserService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class StoreUserRequest extends FormRequest
 {
@@ -37,9 +37,11 @@ class StoreUserRequest extends FormRequest
             'house_number' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
             'mobile_number' => ['required', 'string', 'max:20'],
             'alternate_number' => ['nullable', 'string', 'max:20'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'username' => ['required', 'string', 'max:50', 'regex:/^[a-zA-Z0-9._-]+$/', 'unique:users,username'],
-            'password' => ['nullable', 'confirmed', Password::defaults()],
+            'email' => UserEmailRules::rules(
+                exceptUserId: null,
+                membershipType: $this->input('membership_type'),
+                committeeRole: $this->input('committee_role'),
+            ),
             'membership_type' => [
                 'required',
                 'string',
@@ -58,6 +60,13 @@ class StoreUserRequest extends FormRequest
             'id_proof' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:1024'],
             'profile_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'email' => UserEmailRules::normalize($this->input('email')),
+        ]);
     }
 
     public function messages(): array

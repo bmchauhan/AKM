@@ -4,6 +4,7 @@ namespace App\Services\Admin;
 
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Support\UserEmailRules;
 use App\Traits\HandlesUploads;
 use Illuminate\Http\UploadedFile;
 
@@ -26,7 +27,7 @@ class ProfileService
             'middle_name' => $middleName,
             'last_name' => $lastName,
             'name' => trim(collect([$firstName, $middleName, $lastName])->filter()->implode(' ')),
-            'email' => trim($data['email']),
+            'email' => UserEmailRules::normalize($data['email'] ?? null),
             'mobile_number' => trim($data['mobile_number']),
             'alternate_number' => filled($data['alternate_number'] ?? null) ? trim($data['alternate_number']) : null,
         ];

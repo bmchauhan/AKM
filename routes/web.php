@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\MemberController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\PasswordController;
 use App\Http\Controllers\Admin\ProfileController;
+use App\Http\Controllers\Admin\Settings\EmailSettingsController;
 use App\Http\Controllers\Admin\Settings\ModuleController;
 use App\Http\Controllers\Admin\Settings\PermissionController;
 use App\Http\Controllers\Admin\Settings\RoleController;
@@ -325,6 +326,12 @@ Route::middleware('auth')->group(function () {
             Route::post('/roles/assign-user', [RoleController::class, 'assignUser'])
                 ->middleware('admin.module:settings_roles,update')
                 ->name('roles.assign-user');
+            Route::get('/email', [EmailSettingsController::class, 'index'])
+                ->middleware('admin.module:settings_email,read')
+                ->name('email.index');
+            Route::put('/email', [EmailSettingsController::class, 'update'])
+                ->middleware('admin.module:settings_email,update')
+                ->name('email.update');
         });
     });
 });

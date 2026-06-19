@@ -17,9 +17,18 @@
     $selectedMembership = old('membership_type', $user?->membership_type ?? \App\Enums\MembershipRole::MainMember->value);
     $selectedCommittee = old('committee_role', $user?->committee_role ?? '');
     $showCommittee = count($committeeRoles) > 0;
+    $emailRequired = \App\Support\UserEmailRules::requiresEmail(
+        $selectedMembership,
+        $selectedCommittee,
+        $user?->isSuperAdmin() ?? false,
+    );
 @endphp
 
-<div class="space-y-8" x-data="{ membershipType: @json($selectedMembership) }">
+<div
+    class="space-y-8"
+    x-data="{ membershipType: @json($selectedMembership) }"
+    x-init="membershipType = document.getElementById('membership_type')?.value || membershipType"
+>
     <section class="space-y-4">
         <h3 class="text-sm font-bold uppercase tracking-wide text-[#080D21]">{{ __('messages.users_section_profile') }}</h3>
 
@@ -125,22 +134,23 @@
             <input type="password" name="prevent_autofill_password" tabindex="-1" autocomplete="current-password" class="pointer-events-none absolute h-0 w-0 opacity-0" aria-hidden="true">
         @endunless
 
-        <div class="grid gap-4 sm:grid-cols-2">
-            <x-common.input
-                name="email"
-                type="email"
-                :label="__('messages.users_email')"
-                :value="old('email', $user?->email)"
-                autocomplete="off"
-                required
-            />
-            <x-common.input
-                name="username"
-                :label="__('messages.users_username')"
-                :value="old('username', $user?->username)"
-                autocomplete="off"
-                required
-            />
+        <div @class(['grid gap-4', 'sm:grid-cols-2' => $isEdit])>
+            <div>
+                <x-common.input
+                    name="email"
+                    type="email"
+                    :label="__('messages.users_email')"
+                    :value="old('email', $user?->email)"
+                    autocomplete="off"
+                    :required="$emailRequired"
+                />
+                @unless ($emailRequired)
+                    <p class="mt-1.5 text-xs text-[#0F141E]/50">{{ __('messages.users_email_optional_hint') }}</p>
+                @endunless
+            </div>
+            @if ($isEdit)
+                <x-admin.username-display :value="$user->username" />
+            @endif
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
@@ -150,7 +160,7 @@
                     :label="__('messages.users_membership_type')"
                     :options="$membershipTypes"
                     :value="$selectedMembership"
-                    x-model="membershipType"
+                    x-on:change="membershipType = $event.target.value"
                     required
                 >
                     <option value="">{{ __('messages.users_select_option') }}</option>
@@ -178,22 +188,26 @@
             @endif
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2">
-            <x-common.password
-                name="password"
-                :label="$isEdit ? __('messages.users_password_optional') : __('messages.users_password')"
-                :placeholder="__('messages.users_password_placeholder')"
-                autocomplete="new-password"
-            />
-            <x-common.password
-                name="password_confirmation"
-                :label="__('messages.users_password_confirm')"
-                autocomplete="new-password"
-            />
-        </div>
-
         @unless ($isEdit)
-            <p class="text-xs text-[#0F141E]/50">{{ __('messages.users_password_auto_hint') }}</p>
+            <p class="rounded-lg border border-[#E6EBF4] bg-[#E6EBF4]/50 px-4 py-3 text-sm leading-relaxed text-[#0F141E]/75">
+                {{ __('messages.users_password_auto_notice') }}
+                {{ ' ' }}
+                {{ __('messages.users_username_auto_notice_create') }}
+            </p>
+        @else
+            <div class="grid gap-4 sm:grid-cols-2">
+                <x-common.password
+                    name="password"
+                    :label="__('messages.users_password_optional')"
+                    :placeholder="__('messages.users_password_placeholder')"
+                    autocomplete="new-password"
+                />
+                <x-common.password
+                    name="password_confirmation"
+                    :label="__('messages.users_password_confirm')"
+                    autocomplete="new-password"
+                />
+            </div>
         @endunless
     </section>
 </div>
