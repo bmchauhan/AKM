@@ -7,6 +7,7 @@ use App\Enums\AdminModule;
 use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
+use App\Enums\OwnershipStatus;
 use App\Enums\ModulePermissionAction;
 use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -47,6 +48,8 @@ class User extends Authenticatable
         'membership_type',
         'committee_role',
         'linked_main_member_id',
+        'house_unit_id',
+        'ownership_status',
     ];
 
     /**
@@ -65,6 +68,7 @@ class User extends Authenticatable
             'role' => 'string',
             'gender' => Gender::class,
             'house_type' => HouseType::class,
+            'ownership_status' => OwnershipStatus::class,
         ];
     }
 
@@ -118,6 +122,21 @@ class User extends Authenticatable
     public function maintenanceLedgerEntries(): HasMany
     {
         return $this->hasMany(MaintenanceMonthlyEntry::class, 'main_member_id');
+    }
+
+    public function houseUnit(): BelongsTo
+    {
+        return $this->belongsTo(HouseUnit::class);
+    }
+
+    public function houseOwnerships(): HasMany
+    {
+        return $this->hasMany(HouseOwnership::class, 'main_member_user_id');
+    }
+
+    public function isFormerOwner(): bool
+    {
+        return $this->ownership_status === OwnershipStatus::FormerOwner;
     }
 
     public function hasFinancePaymentHistory(): bool

@@ -12,6 +12,8 @@ use App\Http\Controllers\Admin\Finance\MaintenanceLedgerController;
 use App\Http\Controllers\Admin\Finance\MyPaymentController;
 use App\Http\Controllers\Admin\Finance\WorkerSalaryController;
 use App\Http\Controllers\Admin\Workers\WorkerController;
+use App\Http\Controllers\Admin\HouseController;
+use App\Http\Controllers\Admin\HouseTransferController;
 use App\Http\Controllers\Admin\MemberController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\PasswordController;
@@ -262,6 +264,24 @@ Route::middleware('auth')->group(function () {
             Route::delete('/', [MemberController::class, 'destroy'])
                 ->middleware('admin.module:members_all,delete')
                 ->name('destroy');
+        });
+
+        Route::prefix('houses')->name('houses.')->group(function () {
+            Route::get('/transfers/history', [HouseController::class, 'transferHistory'])
+                ->middleware('admin.module:houses_all,read')
+                ->name('transfers.history');
+            Route::get('/', [HouseController::class, 'index'])
+                ->middleware('admin.module:houses_all,read')
+                ->name('index');
+            Route::get('/{house}', [HouseController::class, 'show'])
+                ->middleware('admin.module:houses_all,read')
+                ->name('show');
+            Route::get('/{house}/transfer', [HouseTransferController::class, 'create'])
+                ->middleware('admin.module:houses_transfer,create')
+                ->name('transfer.create');
+            Route::post('/{house}/transfer', [HouseTransferController::class, 'store'])
+                ->middleware('admin.module:houses_transfer,create')
+                ->name('transfer.store');
         });
 
         Route::prefix('landing-page')->name('landing-page.')->group(function () {

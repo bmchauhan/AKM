@@ -18,6 +18,7 @@ class FinanceCollection extends Model
     protected $fillable = [
         'collection_type',
         'main_member_id',
+        'house_unit_id',
         'maintenance_charge_setting_id',
         'amount',
         'maintenance_base_amount',
@@ -42,6 +43,11 @@ class FinanceCollection extends Model
     public function mainMember(): BelongsTo
     {
         return $this->belongsTo(User::class, 'main_member_id');
+    }
+
+    public function houseUnit(): BelongsTo
+    {
+        return $this->belongsTo(HouseUnit::class);
     }
 
     public function maintenanceChargeSetting(): BelongsTo

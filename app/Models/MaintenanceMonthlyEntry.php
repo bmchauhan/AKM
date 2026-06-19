@@ -15,6 +15,7 @@ class MaintenanceMonthlyEntry extends Model
     protected $fillable = [
         'billing_month',
         'main_member_id',
+        'house_unit_id',
         'maintenance_charge_setting_id',
         'charge_amount',
         'amount_paid',
@@ -41,6 +42,11 @@ class MaintenanceMonthlyEntry extends Model
     public function mainMember(): BelongsTo
     {
         return $this->belongsTo(User::class, 'main_member_id');
+    }
+
+    public function houseUnit(): BelongsTo
+    {
+        return $this->belongsTo(HouseUnit::class);
     }
 
     public function maintenanceChargeSetting(): BelongsTo

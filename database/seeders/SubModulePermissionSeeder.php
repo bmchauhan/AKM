@@ -90,6 +90,7 @@ class SubModulePermissionSeeder extends Seeder
             UserRole::SuperAdmin->value => [
                 'users' => $fullAccess,
                 'members' => $fullAccess,
+                'houses' => $fullAccess,
                 'finance' => $fullAccess,
                 'workers' => $fullAccess,
                 'settings' => $fullAccess,
@@ -98,12 +99,14 @@ class SubModulePermissionSeeder extends Seeder
             'chief_committee_member' => [
                 'users' => $fullAccess,
                 'members' => $fullAccess,
+                'houses' => $fullAccess,
                 'finance' => $fullAccess,
                 'workers' => $fullAccess,
             ],
             'vice_chief_committee_member' => [
                 'users' => $fullAccess,
                 'members' => $fullAccess,
+                'houses' => $fullAccess,
                 'finance' => $fullAccess,
                 'workers' => $fullAccess,
             ],

@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Enums\OwnershipStatus;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,12 @@ class AuthService
         if (! $user || ! Hash::check($password, $user->password)) {
             throw ValidationException::withMessages([
                 'login' => [__('messages.auth_failed')],
+            ]);
+        }
+
+        if ($user->ownership_status === OwnershipStatus::FormerOwner) {
+            throw ValidationException::withMessages([
+                'login' => [__('messages.auth_former_owner_blocked')],
             ]);
         }
 

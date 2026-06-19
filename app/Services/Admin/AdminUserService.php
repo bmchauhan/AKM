@@ -285,6 +285,10 @@ class AdminUserService
         $emailsEnabled = $this->emailSettings->emailsEnabled();
         $credentialsEmailed = $this->provisioning->notifyCredentials($user, $plainPassword, $actor);
 
+        if ($user->isMainMember()) {
+            app(HouseUnitSyncService::class)->syncForMainMember($user->fresh());
+        }
+
         return new CreatedUserResult(
             $user,
             credentialsEmailed: $credentialsEmailed,

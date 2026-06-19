@@ -143,6 +143,69 @@
     </div>
     @endcan
 
+    @can('houses.read')
+    <div x-data="{ housesOpen: @json(request()->routeIs('admin.houses.*')) }">
+      <button
+        type="button"
+        @click="housesOpen = !housesOpen"
+        class="flex w-full items-center gap-3 rounded px-3 py-2 text-sm transition {{ request()->routeIs('admin.houses.*') ? 'bg-[#AB1E23]/20 font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/70 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        :aria-expanded="housesOpen"
+      >
+        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        <span class="flex-1 text-left">{{ __('messages.houses') }}</span>
+        <svg
+          class="h-4 w-4 shrink-0 transition-transform duration-200"
+          :class="housesOpen ? 'rotate-90' : ''"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <div
+        x-show="housesOpen"
+        x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 -translate-y-1"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 -translate-y-1"
+        class="mt-1 space-y-1 pl-4"
+      >
+        @can('houses_all.read')
+        <a
+          href="{{ route('admin.houses.index') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs(['admin.houses.index', 'admin.houses.show']) ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs(['admin.houses.index', 'admin.houses.show']) ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.houses_all') }}
+        </a>
+        <a
+          href="{{ route('admin.houses.transfers.history') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.houses.transfers.history') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.houses.transfers.history') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.houses_transfer_history') }}
+        </a>
+        @endcan
+        @can('houses_transfer.create')
+        <a
+          href="{{ route('admin.houses.index', ['status' => 'occupied']) }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.houses.transfer.*') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.houses.transfer.*') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.houses_transfer') }}
+        </a>
+        @endcan
+      </div>
+    </div>
+    @endcan
+
     @can('finance.read')
     <div x-data="{ financeOpen: @json(request()->routeIs('admin.finance.*')) }">
       <button

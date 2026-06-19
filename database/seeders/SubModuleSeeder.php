@@ -18,6 +18,10 @@ class SubModuleSeeder extends Seeder
                 ['slug' => 'members_all', 'name_key' => 'members_all', 'sort_order' => 1],
                 ['slug' => 'members_add', 'name_key' => 'members_add', 'sort_order' => 2],
             ],
+            'houses' => [
+                ['slug' => 'houses_all', 'name_key' => 'houses_all', 'sort_order' => 1],
+                ['slug' => 'houses_transfer', 'name_key' => 'houses_transfer', 'sort_order' => 2],
+            ],
             'finance' => [
                 ['slug' => 'finance_overview', 'name_key' => 'finance_overview', 'sort_order' => 1],
                 ['slug' => 'finance_house_ledger', 'name_key' => 'finance_house_ledger', 'sort_order' => 2],
@@ -63,6 +67,6 @@ class SubModuleSeeder extends Seeder
             }
         }
 
-        $this->command?->info('Sub-modules seeded for Users, Members, Finance, Settings, and Landing Page.');
+        $this->command?->info('Sub-modules seeded for Users, Members, Houses, Finance, Settings, and Landing Page.');
     }
 }

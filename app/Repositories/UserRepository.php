@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Enums\MembershipRole;
+use App\Enums\OwnershipStatus;
 use App\Enums\UserRole;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
@@ -32,6 +33,10 @@ class UserRepository implements UserRepositoryInterface
             ->withCount([
                 'householdMembers as household_members_count',
             ])
+            ->where(function ($query) {
+                $query->whereNull('ownership_status')
+                    ->orWhere('ownership_status', OwnershipStatus::Active->value);
+            })
             ->when(! empty($filters['exclude_super_admin']), function ($query) {
                 $query->where('role', '!=', UserRole::SuperAdmin->value);
             })
@@ -130,6 +135,10 @@ class UserRepository implements UserRepositoryInterface
     {
         return User::query()
             ->where('membership_type', MembershipRole::MainMember->value)
+            ->where(function ($query) {
+                $query->whereNull('ownership_status')
+                    ->orWhere('ownership_status', OwnershipStatus::Active->value);
+            })
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->get(['id', 'first_name', 'middle_name', 'last_name', 'house_type', 'house_number']);
