@@ -83,7 +83,7 @@ document.addEventListener('alpine:init', () => {
             role.slug = slugify(role.slug);
         },
 
-        removeRole(index) {
+        async removeRole(index) {
             const role = this.roles[index];
 
             if (role.is_system) {
@@ -93,6 +93,17 @@ document.addEventListener('alpine:init', () => {
 
             if (role.users_count > 0) {
                 window.toast?.('warning', messages.inUseDelete ?? 'This role is assigned to users.');
+                return;
+            }
+
+            const confirmed = await window.confirmDelete?.({
+                title: messages.deleteConfirmTitle ?? 'Are you sure?',
+                message: messages.deleteConfirm ?? 'Are you sure you want to remove this role?',
+                confirmText: messages.deleteConfirmYes ?? 'Yes, delete',
+                cancelText: messages.deleteConfirmCancel ?? 'Cancel',
+            });
+
+            if (! confirmed) {
                 return;
             }
 

@@ -1,4 +1,5 @@
 import './bootstrap';
+import './confirm-dialog';
 import './nav-scroll';
 import './toast';
 import './roles-manager';

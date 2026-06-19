@@ -3,6 +3,10 @@
         x-data="rolesManager(@js($roles), @js(route('admin.settings.roles.sync')), @js([
             'systemDelete' => __('messages.roles_system_delete'),
             'inUseDelete' => __('messages.roles_in_use_delete_short'),
+            'deleteConfirmTitle' => __('messages.delete_confirm_title'),
+            'deleteConfirm' => __('messages.roles_delete_confirm'),
+            'deleteConfirmYes' => __('messages.delete_confirm_yes'),
+            'deleteConfirmCancel' => __('messages.delete_confirm_cancel'),
             'saveError' => __('messages.roles_save_error'),
             'networkError' => __('messages.roles_network_error'),
             'usersLabel' => __('messages.roles_users'),
