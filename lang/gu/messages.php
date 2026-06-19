@@ -32,6 +32,7 @@ return [
     'delete_confirm_title' => 'શું તમે ચોક્કસ છો?',
     'delete_confirm_yes' => 'હા, કાઢી નાખો',
     'delete_confirm_cancel' => 'રદ કરો',
+    'hard_delete_forbidden' => 'કાયમી કાઢી નાખવાની મંજૂરી નથી.',
     'directory_roles_empty' => 'હજી નિર્દેશિકા ભૂમિકાઓ નથી.',
     'directory_roles_slug' => 'સ્લગ',
     'directory_roles_slug_placeholder' => 'દા.ત. electricians',

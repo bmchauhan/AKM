@@ -49,6 +49,7 @@ class AdminFinanceMaintenanceLedgerService
         ];
 
         $query = MaintenanceMonthlyEntry::query()
+            ->whereHas('mainMember')
             ->with(['mainMember', 'recordedBy'])
             ->whereDate('billing_month', $billingMonth->toDateString());
 
@@ -56,7 +57,9 @@ class AdminFinanceMaintenanceLedgerService
 
         $entries = $query
             ->clone()
+            ->whereHas('mainMember')
             ->join('users', 'users.id', '=', 'maintenance_monthly_entries.main_member_id')
+            ->whereNull('users.deleted_at')
             ->orderBy('users.house_type')
             ->orderByRaw('CAST(users.house_number AS UNSIGNED)')
             ->orderBy('users.house_number')
@@ -67,6 +70,7 @@ class AdminFinanceMaintenanceLedgerService
         $entries->getCollection()->transform(fn (MaintenanceMonthlyEntry $entry) => $this->mapListRow($entry));
 
         $allForMonth = MaintenanceMonthlyEntry::query()
+            ->whereHas('mainMember')
             ->whereDate('billing_month', $billingMonth->toDateString())
             ->get();
 
@@ -75,6 +79,7 @@ class AdminFinanceMaintenanceLedgerService
 
         if ($hasActiveFilters) {
             $filteredQuery = MaintenanceMonthlyEntry::query()
+                ->whereHas('mainMember')
                 ->whereDate('billing_month', $billingMonth->toDateString());
             $this->applyEntryFilters($filteredQuery, $normalizedFilters);
             $summarySource = $filteredQuery->get();
@@ -362,7 +367,7 @@ class AdminFinanceMaintenanceLedgerService
 
     public function totalMaintenanceCollected(?Carbon $from = null, ?Carbon $to = null): float
     {
-        $query = MaintenanceMonthlyEntry::query();
+        $query = MaintenanceMonthlyEntry::query()->whereHas('mainMember');
 
         if ($from) {
             $query->whereDate('billing_month', '>=', $from->toDateString());
@@ -843,7 +848,9 @@ class AdminFinanceMaintenanceLedgerService
         ]);
 
         return $query
+            ->whereHas('mainMember')
             ->join('users', 'users.id', '=', 'maintenance_monthly_entries.main_member_id')
+            ->whereNull('users.deleted_at')
             ->orderBy('users.house_type')
             ->orderByRaw('CAST(users.house_number AS UNSIGNED)')
             ->orderBy('users.house_number')

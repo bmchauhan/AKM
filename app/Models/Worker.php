@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesSoftDeletes;
 use App\Enums\WorkerType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,8 @@ use Illuminate\Support\Facades\Storage;
 
 class Worker extends Model
 {
+    use UsesSoftDeletes;
+
     /**
      * @var list<string>
      */

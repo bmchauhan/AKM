@@ -421,6 +421,7 @@ class AdminFinanceOverviewService
     private function recentCollections(Carbon $from, Carbon $to): array
     {
         $ledgerRows = MaintenanceMonthlyEntry::query()
+            ->whereHas('mainMember')
             ->with(['mainMember'])
             ->where('amount_paid', '>', 0)
             ->whereBetween('paid_on', [$from->toDateString(), $to->toDateString()])

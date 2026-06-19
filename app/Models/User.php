@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesSoftDeletes;
 use App\Enums\AdminModule;
 use App\Enums\Gender;
 use App\Enums\HouseType;
@@ -21,7 +22,7 @@ use Illuminate\Support\Facades\Storage;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, UsesSoftDeletes;
 
     /**
      * @var list<string>

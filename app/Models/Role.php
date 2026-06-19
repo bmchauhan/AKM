@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesSoftDeletes;
 use App\Enums\RoleType;
 use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Role extends Model
 {
+    use UsesSoftDeletes;
+
     protected $fillable = [
         'name',
         'short_form',

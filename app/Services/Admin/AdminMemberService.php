@@ -287,9 +287,6 @@ class AdminMemberService
             ]);
         }
 
-        $this->deletePublicUpload($member->id_proof_path);
-        $this->deletePublicUpload($member->profile_image_path);
-
         $this->users->delete($member);
     }
 

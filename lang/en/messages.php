@@ -32,6 +32,7 @@ return [
     'delete_confirm_title' => 'Are you sure?',
     'delete_confirm_yes' => 'Yes, delete',
     'delete_confirm_cancel' => 'Cancel',
+    'hard_delete_forbidden' => 'Permanent deletion is not allowed.',
     'directory_roles_empty' => 'No directory roles yet.',
     'directory_roles_slug' => 'Slug',
     'directory_roles_slug_placeholder' => 'e.g. electricians',

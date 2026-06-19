@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesSoftDeletes;
 use App\Enums\FinanceExpenseTag;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FinanceExpense extends Model
 {
+    use UsesSoftDeletes;
+
     /**
      * @var list<string>
      */

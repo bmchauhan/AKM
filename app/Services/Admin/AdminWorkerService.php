@@ -242,7 +242,6 @@ class AdminWorkerService
 
     public function delete(Worker $worker): void
     {
-        $this->deletePublicUpload($worker->profile_image_path);
         $worker->delete();
     }
 

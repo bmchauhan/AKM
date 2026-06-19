@@ -32,6 +32,7 @@ return [
     'delete_confirm_title' => 'क्या आप सुनिश्चित हैं?',
     'delete_confirm_yes' => 'हाँ, हटाएं',
     'delete_confirm_cancel' => 'रद्द करें',
+    'hard_delete_forbidden' => 'स्थायी हटाना अनुमत नहीं है।',
     'directory_roles_empty' => 'अभी कोई निर्देशिका भूमिका नहीं है।',
     'directory_roles_slug' => 'स्लग',
     'directory_roles_slug_placeholder' => 'उदा. electricians',

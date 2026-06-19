@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesSoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UsefulDirectoryRole extends Model
 {
+    use UsesSoftDeletes;
+
     protected $fillable = [
         'slug',
         'name_en',

@@ -399,6 +399,7 @@ class AdminDashboardService
             ->sum('amount');
 
         $maintenanceMonth = (float) MaintenanceMonthlyEntry::query()
+            ->whereHas('mainMember')
             ->whereBetween('billing_month', [$start, $end])
             ->sum('amount_paid');
 
@@ -414,7 +415,11 @@ class AdminDashboardService
                 'key' => 'collections_today',
                 'label' => __('messages.dashboard_stat_collections_today'),
                 'value' => (int) FinanceCollection::query()->whereDate('received_on', Carbon::today())->count()
-                    + (int) MaintenanceMonthlyEntry::query()->whereDate('paid_on', Carbon::today())->where('amount_paid', '>', 0)->count(),
+                    + (int) MaintenanceMonthlyEntry::query()
+                        ->whereHas('mainMember')
+                        ->whereDate('paid_on', Carbon::today())
+                        ->where('amount_paid', '>', 0)
+                        ->count(),
                 'hint' => __('messages.dashboard_stat_collections_today_hint'),
                 'tone' => 'accent',
             ],
@@ -887,6 +892,7 @@ class AdminDashboardService
     private function pendingMaintenanceCount(): int
     {
         return MaintenanceMonthlyEntry::query()
+            ->whereHas('mainMember')
             ->whereIn('status', $this->unpaidStatuses())
             ->count();
     }

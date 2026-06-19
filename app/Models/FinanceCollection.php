@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesSoftDeletes;
 use App\Enums\FinanceCollectionType;
 use App\Enums\FinancePaymentMode;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FinanceCollection extends Model
 {
+    use UsesSoftDeletes;
+
     /**
      * @var list<string>
      */

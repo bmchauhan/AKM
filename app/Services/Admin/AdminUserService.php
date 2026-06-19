@@ -338,9 +338,6 @@ class AdminUserService
             ]);
         }
 
-        $this->deletePublicUpload($user->id_proof_path);
-        $this->deletePublicUpload($user->profile_image_path);
-
         $this->users->delete($user);
     }
 

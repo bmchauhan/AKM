@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesSoftDeletes;
 use App\Enums\UsefulDirectorySource;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UsefulDirectoryContact extends Model
 {
+    use UsesSoftDeletes;
+
     protected $fillable = [
         'directory_role_id',
         'source',
