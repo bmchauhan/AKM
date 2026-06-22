@@ -2,95 +2,118 @@
 
 namespace App\Services\Admin;
 
+use App\Enums\FinancePaymentReceiptKind;
 use App\Enums\MaintenanceMonthEntryStatus;
-use App\Models\MaintenanceMonthlyEntry;
+use App\Models\FinancePaymentReceipt;
 use App\Models\User;
+use App\Models\Worker;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
+use Illuminate\Support\Collection;
 
 class AdminFinanceMyPaymentService
 {
     public function __construct(
         private readonly AdminFinanceFundSettingService $fundSettings,
+        private readonly FinancePaymentReceiptService $receipts,
     ) {}
 
     public function canView(User $actor): bool
     {
-        return $actor->isMainMember();
+        if ($actor->isResidentMainMember()) {
+            return true;
+        }
+
+        return $actor->isSecurityGuard() && $actor->workerRecord()->exists();
+    }
+
+    public function canDownloadReceipt(FinancePaymentReceipt $receipt, User $actor): bool
+    {
+        return $this->receipts->canDownload($receipt, $actor);
     }
 
     /**
      * @return array{
      *     payments: LengthAwarePaginator,
      *     total_received: string,
-     *     house: ?string
+     *     house: ?string,
+     *     view_mode: 'member'|'worker_salary',
+     *     profile_label: ?string,
+     *     profile_value: ?string
      * }
      */
     public function screenData(User $actor): array
     {
-        $ledgerEntries = MaintenanceMonthlyEntry::query()
-            ->where('main_member_id', $actor->id)
-            ->orderByDesc('billing_month')
-            ->get()
-            ->map(fn (MaintenanceMonthlyEntry $item): array => [
-                'received_on' => $item->billing_month->format('F Y'),
-                'type_label' => __('messages.finance_collection_maintenance'),
-                'amount' => $this->fundSettings->formatMoney($item->amount_paid),
-                'status_label' => ($item->status instanceof MaintenanceMonthEntryStatus
-                    ? $item->status
-                    : MaintenanceMonthEntryStatus::from((string) $item->status))->label(),
-                'reference' => $item->reference,
-                'notes' => $item->notes,
-                'sort_date' => $item->billing_month->format('Y-m-d'),
-            ]);
+        $isWorkerView = $actor->isSecurityGuard() && $actor->workerRecord;
 
-        $otherPayments = \App\Models\FinanceCollection::query()
-            ->where('main_member_id', $actor->id)
-            ->where('collection_type', '!=', \App\Enums\FinanceCollectionType::Maintenance->value)
-            ->latest('received_on')
-            ->get()
-            ->map(function ($item): array {
-                $type = $item->collection_type;
+        $query = FinancePaymentReceipt::query()
+            ->withCount('lines')
+            ->orderByDesc('paid_on')
+            ->orderByDesc('id');
 
-                return [
-                    'received_on' => $item->received_on->format('d M Y'),
-                    'type_label' => $type->label(),
-                    'amount' => $this->fundSettings->formatMoney($item->amount),
-                    'status_label' => null,
-                    'reference' => $item->reference,
-                    'notes' => $item->notes,
-                    'sort_date' => $item->received_on->format('Y-m-d'),
-                ];
-            });
+        if ($isWorkerView) {
+            $query->where('worker_id', $actor->workerRecord->id)
+                ->where('receipt_kind', FinancePaymentReceiptKind::WorkerSalary->value);
+        } else {
+            $query->where('main_member_id', $actor->id);
+        }
 
-        $merged = $ledgerEntries->concat($otherPayments)
-            ->sortByDesc('sort_date')
-            ->values();
+        $receipts = $query->get();
+        $rows = $receipts->map(fn (FinancePaymentReceipt $receipt): array => $this->mapReceiptRow($receipt));
 
+        $total = (float) $receipts->sum('total_amount');
+
+        return [
+            'payments' => $this->paginateRows($rows),
+            'total_received' => $this->fundSettings->formatMoney($total),
+            'house' => $isWorkerView ? null : $actor->houseLabel(),
+            'view_mode' => $isWorkerView ? 'worker_salary' : 'member',
+            'profile_label' => $isWorkerView ? __('messages.workers_name') : null,
+            'profile_value' => $isWorkerView ? $actor->workerRecord?->name : null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapReceiptRow(FinancePaymentReceipt $receipt): array
+    {
+        $kind = $receipt->receipt_kind;
+        $lineCount = (int) $receipt->lines_count;
+        $statusLabel = null;
+
+        if ($kind === FinancePaymentReceiptKind::Maintenance && $lineCount > 1) {
+            $statusLabel = __('messages.finance_receipt_months_count', ['count' => $lineCount]);
+        }
+
+        return [
+            'receipt_id' => $receipt->id,
+            'received_on' => $receipt->paid_on->format('d M Y'),
+            'type_label' => $kind->label(),
+            'amount' => $this->fundSettings->formatMoney($receipt->total_amount),
+            'status_label' => $statusLabel,
+            'reference' => $receipt->reference,
+            'notes' => $receipt->notes,
+            'receipt_number' => $receipt->receipt_number,
+            'sort_date' => $receipt->paid_on->format('Y-m-d'),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $rows
+     */
+    private function paginateRows(Collection $rows): LengthAwarePaginator
+    {
         $page = max(1, (int) request()->integer('page', 1));
         $perPage = 20;
-        $items = $merged->slice(($page - 1) * $perPage, $perPage)->values();
+        $items = $rows->slice(($page - 1) * $perPage, $perPage)->values();
 
-        $payments = new Paginator(
+        return new Paginator(
             $items,
-            $merged->count(),
+            $rows->count(),
             $perPage,
             $page,
             ['path' => request()->url(), 'query' => request()->query()],
         );
-
-        $total = (float) MaintenanceMonthlyEntry::query()
-            ->where('main_member_id', $actor->id)
-            ->sum('amount_paid');
-        $total += (float) \App\Models\FinanceCollection::query()
-            ->where('main_member_id', $actor->id)
-            ->where('collection_type', '!=', \App\Enums\FinanceCollectionType::Maintenance->value)
-            ->sum('amount');
-
-        return [
-            'payments' => $payments,
-            'total_received' => $this->fundSettings->formatMoney($total),
-            'house' => $actor->houseLabel(),
-        ];
     }
 }

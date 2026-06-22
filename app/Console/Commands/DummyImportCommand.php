@@ -20,7 +20,10 @@ class DummyImportCommand extends Command
                             {--maintenance-charge= : Monthly maintenance charge amount}
                             {--opening-balance= : Society fund opening balance amount}
                             {--opening-balance-from= : Opening balance effective date (Y-m-d)}
+                            {--workers= : Number of workers to create}
+                            {--worker-salary-range= : Worker monthly salary range, e.g. 10000-14000}
                             {--no-expenses : Skip expense records}
+                            {--no-worker-payments : Skip monthly worker salary payment records}
                             {--force : Skip confirmation prompt}';
 
     protected $description = 'Interactively import dummy members and finance records for testing';
@@ -52,7 +55,13 @@ class DummyImportCommand extends Command
         $this->components->twoColumnDetail('Maintenance charge', '₹'.number_format($config->maintenanceCharge, 2));
         $this->components->twoColumnDetail('Opening balance', '₹'.number_format($config->openingBalance, 2));
         $this->components->twoColumnDetail('Opening balance from', $config->openingBalanceFrom->toDateString());
+        $this->components->twoColumnDetail('Workers', (string) $config->workerCount);
+        $this->components->twoColumnDetail('Worker salary / month', '₹'.number_format($config->workerSalaryMin, 0)
+            .($config->workerSalaryMin !== $config->workerSalaryMax
+                ? '–₹'.number_format($config->workerSalaryMax, 0)
+                : ''));
         $this->components->twoColumnDetail('Include expenses', $config->includeExpenses ? 'Yes' : 'No');
+        $this->components->twoColumnDetail('Worker salary payments', $config->includeWorkerPayments ? 'Yes' : 'No');
         $this->newLine();
 
         try {
@@ -137,6 +146,24 @@ class DummyImportCommand extends Command
             $includeExpenses = $this->confirm('Include finance expense records?', true);
         }
 
+        $workerCount = $this->resolveIntOption('workers', 'How many workers?', 5);
+
+        $workerSalaryRangeInput = $this->option('worker-salary-range')
+            ?? $this->ask('Worker monthly salary range (e.g. 10000-14000)?', '10000-14000');
+
+        [$workerSalaryMin, $workerSalaryMax] = DummyImporterConfig::parseSalaryRange((string) $workerSalaryRangeInput);
+
+        $includeWorkerPayments = ! $this->option('no-worker-payments');
+
+        if (
+            $includeWorkerPayments
+            && ! $this->option('no-worker-payments')
+            && $this->option('finance-from') === null
+            && $this->option('finance-to') === null
+        ) {
+            $includeWorkerPayments = $this->confirm('Include monthly worker salary payments?', true);
+        }
+
         return new DummyImporterConfig(
             userCount: $userCount,
             mainMemberCount: $mainMemberCount,
@@ -148,6 +175,10 @@ class DummyImportCommand extends Command
             openingBalance: $openingBalance,
             openingBalanceFrom: $openingBalanceFrom,
             includeExpenses: $includeExpenses,
+            workerCount: $workerCount,
+            workerSalaryMin: $workerSalaryMin,
+            workerSalaryMax: $workerSalaryMax,
+            includeWorkerPayments: $includeWorkerPayments,
         );
     }
 

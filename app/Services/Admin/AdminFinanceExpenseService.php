@@ -17,6 +17,7 @@ class AdminFinanceExpenseService
 
     public function __construct(
         private readonly AdminFinanceFundSettingService $fundSettings,
+        private readonly FinancePaymentReceiptService $receipts,
     ) {}
 
     /**
@@ -132,10 +133,16 @@ class AdminFinanceExpenseService
      */
     public function create(User $actor, array $data): FinanceExpense
     {
-        return FinanceExpense::query()->create([
+        $expense = FinanceExpense::query()->create([
             ...$this->resolveExpensePayload($data),
             'recorded_by_user_id' => $actor->id,
         ]);
+
+        if ($expense->worker_id) {
+            $this->receipts->recordWorkerSalary($expense, $actor);
+        }
+
+        return $expense;
     }
 
     /**

@@ -10,10 +10,15 @@ return new class extends Migration
     {
         Schema::create('modules', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('parent_id')
+                ->nullable()
+                ->constrained('modules')
+                ->nullOnDelete();
             $table->string('slug')->unique();
             $table->string('name');
             $table->string('description')->nullable();
             $table->boolean('is_system')->default(true);
+            $table->boolean('is_permission_target')->default(true);
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->timestamps();
         });

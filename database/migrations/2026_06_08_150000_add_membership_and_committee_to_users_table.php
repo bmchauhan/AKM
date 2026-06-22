@@ -2,7 +2,6 @@
 
 use App\Enums\MembershipRole;
 use App\Enums\UserRole;
-use App\Models\Role;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -73,13 +72,13 @@ return new class extends Migration
 
     private function removeMembershipRolesFromRolesTable(): void
     {
-        $membershipRoleIds = Role::query()
+        $membershipRoleIds = DB::table('roles')
             ->whereIn('slug', self::MEMBERSHIP_SLUGS)
             ->pluck('id');
 
         if ($membershipRoleIds->isNotEmpty()) {
             DB::table('module_role')->whereIn('role_id', $membershipRoleIds)->delete();
-            Role::query()->whereIn('id', $membershipRoleIds)->delete();
+            DB::table('roles')->whereIn('id', $membershipRoleIds)->delete();
         }
     }
 };

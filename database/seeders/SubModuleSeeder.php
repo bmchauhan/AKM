@@ -31,6 +31,10 @@ class SubModuleSeeder extends Seeder
                 ['slug' => 'finance_maintenance_charges', 'name_key' => 'finance_maintenance_charges', 'sort_order' => 6],
                 ['slug' => 'finance_fund_setting', 'name_key' => 'finance_fund_setting', 'sort_order' => 7],
             ],
+            'visitors' => [
+                ['slug' => 'visitors_log', 'name_key' => 'visitors_log', 'sort_order' => 1],
+                ['slug' => 'visitors_all', 'name_key' => 'visitors_all', 'sort_order' => 2],
+            ],
             'settings' => [
                 ['slug' => 'settings_modules', 'name_key' => 'settings_modules', 'sort_order' => 1],
                 ['slug' => 'settings_permissions', 'name_key' => 'settings_permissions', 'sort_order' => 2],
@@ -67,6 +71,6 @@ class SubModuleSeeder extends Seeder
             }
         }
 
-        $this->command?->info('Sub-modules seeded for Users, Members, Houses, Finance, Settings, and Landing Page.');
+        $this->command?->info('Sub-modules seeded for Users, Members, Houses, Finance, Visitors, Settings, and Landing Page.');
     }
 }

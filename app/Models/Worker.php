@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\UsesSoftDeletes;
 use App\Enums\WorkerType;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,6 +17,7 @@ class Worker extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'user_id',
         'worker_type',
         'name',
         'mobile_number',
@@ -35,9 +37,19 @@ class Worker extends Model
         ];
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function salaryRates(): HasMany
     {
         return $this->hasMany(WorkerSalaryRate::class)->orderByDesc('effective_from');
+    }
+
+    public function salaryPayments(): HasMany
+    {
+        return $this->hasMany(FinanceExpense::class);
     }
 
     public function profileImageUrl(): ?string

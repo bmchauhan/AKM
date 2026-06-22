@@ -56,6 +56,11 @@ class HouseUnit extends Model
         return $this->hasMany(MaintenanceMonthlyEntry::class);
     }
 
+    public function visitorEntries(): HasMany
+    {
+        return $this->hasMany(VisitorEntry::class);
+    }
+
     public function isVacant(): bool
     {
         return $this->current_ownership_id === null;

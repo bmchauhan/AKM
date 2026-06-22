@@ -46,18 +46,25 @@ class ModuleSeeder extends Seeder
                 'sort_order' => 5,
             ],
             [
+                'slug' => 'visitors',
+                'name' => 'Visitors',
+                'description' => 'Gate visitor logging, rental compliance, and visit history.',
+                'is_system' => true,
+                'sort_order' => 6,
+            ],
+            [
                 'slug' => 'settings',
                 'name' => 'Settings',
                 'description' => 'Admin configuration including roles, modules, and permissions.',
                 'is_system' => true,
-                'sort_order' => 6,
+                'sort_order' => 7,
             ],
             [
                 'slug' => 'landing_page',
                 'name' => 'Landing Page',
                 'description' => 'Manage public website content and landing page sections.',
                 'is_system' => true,
-                'sort_order' => 7,
+                'sort_order' => 8,
             ],
         ];
 

@@ -21,6 +21,7 @@
   </div>
 
   <nav class="flex-1 space-y-1 overflow-y-auto p-4">
+    @unless (auth()->user()?->isSecurityGuard())
     <a
       href="{{ route('admin.dashboard') }}"
       class="flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.dashboard') ? 'bg-[#AB1E23] text-[#E6EBF4]' : 'text-[#E6EBF4]/70 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
@@ -30,6 +31,7 @@
       </svg>
       {{ __('messages.dashboard') }}
     </a>
+    @endunless
 
     @can('users.read')
     <div x-data="{ usersOpen: @json(request()->routeIs('admin.users.*')) }">
@@ -319,7 +321,72 @@
     </a>
     @endcan
 
-    @if (auth()->user()->isMainMember())
+    @can('visitors.read')
+    <div x-data="{ visitorsOpen: @json(request()->routeIs('admin.visitors.*')) }">
+      <button
+        type="button"
+        @click="visitorsOpen = !visitorsOpen"
+        class="flex w-full items-center gap-3 rounded px-3 py-2 text-sm transition {{ request()->routeIs('admin.visitors.*') ? 'bg-[#AB1E23]/20 font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/70 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        :aria-expanded="visitorsOpen"
+      >
+        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+        <span class="flex-1 text-left">{{ __('messages.visitors') }}</span>
+        <svg
+          class="h-4 w-4 shrink-0 transition-transform duration-200"
+          :class="visitorsOpen ? 'rotate-90' : ''"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <div
+        x-show="visitorsOpen"
+        x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 -translate-y-1"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 -translate-y-1"
+        class="mt-1 space-y-1 pl-4"
+      >
+        @can('visitors_log.create')
+        <a
+          href="{{ route('admin.visitors.log') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.visitors.log') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.visitors.log') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.visitors_log') }}
+        </a>
+        @endcan
+        @can('visitors_log.read')
+        <a
+          href="{{ route('admin.visitors.today') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs('admin.visitors.today') ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs('admin.visitors.today') ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.visitors_today') }}
+        </a>
+        @endcan
+        @can('visitors_all.read')
+        <a
+          href="{{ route('admin.visitors.index') }}"
+          class="flex items-center gap-3 rounded py-2 pl-7 pr-3 text-sm transition {{ request()->routeIs(['admin.visitors.index', 'admin.visitors.show']) ? 'bg-[#AB1E23] font-medium text-[#E6EBF4]' : 'text-[#E6EBF4]/60 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"
+        >
+          <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ request()->routeIs(['admin.visitors.index', 'admin.visitors.show']) ? 'bg-[#E6C280]' : 'bg-[#E6EBF4]/40' }}"></span>
+          {{ __('messages.visitors_all') }}
+        </a>
+        @endcan
+      </div>
+    </div>
+    @endcan
+
+    @if (auth()->user()?->canViewOwnPaymentHistory())
     <a
       href="{{ route('admin.finance.my-payments.index') }}"
       class="flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.finance.my-payments.*') ? 'bg-[#AB1E23] text-[#E6EBF4]' : 'text-[#E6EBF4]/70 hover:bg-[#E6EBF4]/10 hover:text-[#E6EBF4]' }}"

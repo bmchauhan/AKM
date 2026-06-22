@@ -20,6 +20,7 @@ class AdminFinanceMaintenanceLedgerService
     public function __construct(
         private readonly AdminFinanceFundSettingService $fundSettings,
         private readonly AdminFinanceMaintenanceChargeService $maintenanceCharges,
+        private readonly FinancePaymentReceiptService $receipts,
     ) {}
 
     /**
@@ -264,8 +265,9 @@ class AdminFinanceMaintenanceLedgerService
      *     notes?: ?string
      * }  $data
      */
-    public function updateEntry(MaintenanceMonthlyEntry $entry, User $actor, array $data): MaintenanceMonthlyEntry
+    public function updateEntry(MaintenanceMonthlyEntry $entry, User $actor, array $data, bool $suppressReceipt = false): MaintenanceMonthlyEntry
     {
+        $previousPaid = (float) $entry->amount_paid;
         $amountPaid = round((float) $data['amount_paid'], 2);
         $charge = (float) $entry->charge_amount;
 
@@ -298,7 +300,19 @@ class AdminFinanceMaintenanceLedgerService
             'recorded_by_user_id' => $actor->id,
         ]);
 
-        return $entry->fresh(['mainMember', 'recordedBy']);
+        $fresh = $entry->fresh(['mainMember', 'recordedBy']);
+        $applied = round($amountPaid - $previousPaid, 2);
+
+        if (! $suppressReceipt && $applied > 0.009) {
+            $this->receipts->recordMaintenanceSingle($fresh, $actor, $applied, [
+                'paid_on' => $paidOn,
+                'payment_mode' => $data['payment_mode'] ?? null,
+                'reference' => $data['reference'] ?? null,
+                'notes' => $data['notes'] ?? null,
+            ]);
+        }
+
+        return $fresh;
     }
 
     public function markPaid(MaintenanceMonthlyEntry $entry, User $actor, array $data = []): MaintenanceMonthlyEntry
@@ -581,7 +595,7 @@ class AdminFinanceMaintenanceLedgerService
                     'payment_mode' => $meta['payment_mode'] ?? null,
                     'reference' => $meta['reference'] ?? null,
                     'notes' => $meta['notes'] ?? null,
-                ]);
+                ], suppressReceipt: true);
                 $appliedCount++;
             }
 
@@ -594,10 +608,12 @@ class AdminFinanceMaintenanceLedgerService
                         'payment_mode' => $meta['payment_mode'] ?? null,
                         'reference' => $meta['reference'] ?? null,
                         'notes' => $meta['notes'] ?? null,
-                    ]);
+                    ], suppressReceipt: true);
                     $appliedCount++;
                 }
             }
+
+            $this->receipts->recordMaintenanceBulk($member, $actor, $preview, $meta);
 
             return [
                 'applied_count' => $appliedCount,

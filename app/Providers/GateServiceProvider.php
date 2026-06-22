@@ -30,7 +30,7 @@ class GateServiceProvider extends ServiceProvider
 
     private function registerModuleGates(): void
     {
-        if (! Schema::hasTable('modules')) {
+        if (! Schema::hasTable('modules') || ! Schema::hasColumn('modules', 'is_permission_target')) {
             return;
         }
 

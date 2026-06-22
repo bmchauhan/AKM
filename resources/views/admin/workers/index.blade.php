@@ -67,8 +67,20 @@
                             @else
                                 <span class="inline-flex rounded-full bg-[#E5989B]/20 px-2 py-0.5 text-xs font-medium text-[#080D21]">{{ __('messages.workers_inactive') }}</span>
                             @endif
+                            @if ($worker['has_login'])
+                                <p class="mt-1 text-xs text-[#0F141E]/60">{{ __('messages.workers_login_active', ['username' => $worker['login_username']]) }}</p>
+                            @endif
                         </div>
                         <div class="flex flex-wrap items-center justify-end gap-1 md:col-span-2">
+                            @if (auth()->user()?->isSuperAdmin() && $activeTab === 'security_guard' && ! $worker['has_login'] && $worker['is_active'])
+                                <form method="POST" action="{{ route('admin.workers.create-login') }}" class="inline-flex">
+                                    @csrf
+                                    <input type="hidden" name="worker_id" value="{{ $worker['id'] }}">
+                                    <x-common.button type="submit" class="!px-3 !py-1.5 !text-xs">
+                                        {{ __('messages.workers_create_login') }}
+                                    </x-common.button>
+                                </form>
+                            @endif
                             @can('workers.update')
                                 <form method="POST" action="{{ route('admin.workers.open-edit') }}" class="inline-flex">
                                     @csrf
@@ -131,4 +143,9 @@
             'openOnLoad' => $openSalaryWorkerModal ?? false,
         ])
     @endcan
+
+    @include('admin.workers._credentials-modal', [
+        'loginCredentials' => $loginCredentials ?? null,
+        'openCredentialsModal' => $openCredentialsModal ?? false,
+    ])
 </x-layouts.admin>

@@ -11,6 +11,8 @@ use App\Enums\OwnershipStatus;
 use App\Enums\ModulePermissionAction;
 use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Services\Admin\AdminFinanceMyPaymentService;
 use App\Services\Admin\ModulePermissionService;
 use App\Support\SuperAdminOnlyModules;
 use Database\Factories\UserFactory;
@@ -122,6 +124,16 @@ class User extends Authenticatable
     public function maintenanceLedgerEntries(): HasMany
     {
         return $this->hasMany(MaintenanceMonthlyEntry::class, 'main_member_id');
+    }
+
+    public function workerRecord(): HasOne
+    {
+        return $this->hasOne(Worker::class);
+    }
+
+    public function canViewOwnPaymentHistory(): bool
+    {
+        return app(AdminFinanceMyPaymentService::class)->canView($this);
     }
 
     public function houseUnit(): BelongsTo
@@ -287,6 +299,19 @@ class User extends Authenticatable
         return $this->membership_type === MembershipRole::RentalMember->value;
     }
 
+    public function isSecurityGuard(): bool
+    {
+        return $this->committee_role === 'security_guard';
+    }
+
+    /**
+     * Main members who live in the society — excludes gate-only security guard logins.
+     */
+    public function isResidentMainMember(): bool
+    {
+        return $this->isMainMember() && ! $this->isSecurityGuard();
+    }
+
     /**
      * Committee (or SA) users who may add/edit household members for any main member — not only their own.
      * Requires committee Users create or update (pivot), so MM+committee still needs explicit Users access.
@@ -332,7 +357,7 @@ class User extends Authenticatable
             ? $action
             : ModulePermissionAction::from($action);
 
-        if ($this->isMainMember() && $this->isMembersModuleSlug($moduleKey)) {
+        if ($this->isResidentMainMember() && $this->isMembersModuleSlug($moduleKey)) {
             return true;
         }
 
@@ -367,7 +392,7 @@ class User extends Authenticatable
             ? $action
             : ModulePermissionAction::from($action);
 
-        if ($parentSlug === AdminModule::Members->value && $this->isMainMember()) {
+        if ($parentSlug === AdminModule::Members->value && $this->isResidentMainMember()) {
             return true;
         }
 
@@ -435,7 +460,7 @@ class User extends Authenticatable
             return false;
         }
 
-        if ($this->isMainMember() && ! $this->canManageAnyHousehold()) {
+        if ($this->isResidentMainMember() && ! $this->canManageAnyHousehold()) {
             return (int) $target->linked_main_member_id === $this->id;
         }
 

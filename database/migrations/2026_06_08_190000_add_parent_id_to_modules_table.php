@@ -9,23 +9,37 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('modules', function (Blueprint $table) {
-            $table->foreignId('parent_id')
-                ->nullable()
-                ->after('id')
-                ->constrained('modules')
-                ->nullOnDelete();
-            $table->boolean('is_permission_target')->default(true)->after('is_system');
-        });
+        if (! Schema::hasColumn('modules', 'parent_id')) {
+            Schema::table('modules', function (Blueprint $table) {
+                $table->foreignId('parent_id')
+                    ->nullable()
+                    ->after('id')
+                    ->constrained('modules')
+                    ->nullOnDelete();
+            });
+        }
 
-        DB::table('modules')->update(['is_permission_target' => true]);
+        if (! Schema::hasColumn('modules', 'is_permission_target')) {
+            Schema::table('modules', function (Blueprint $table) {
+                $table->boolean('is_permission_target')->default(true)->after('is_system');
+            });
+
+            DB::table('modules')->update(['is_permission_target' => true]);
+        }
     }
 
     public function down(): void
     {
-        Schema::table('modules', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('parent_id');
-            $table->dropColumn('is_permission_target');
-        });
+        if (Schema::hasColumn('modules', 'parent_id')) {
+            Schema::table('modules', function (Blueprint $table) {
+                $table->dropConstrainedForeignId('parent_id');
+            });
+        }
+
+        if (Schema::hasColumn('modules', 'is_permission_target')) {
+            Schema::table('modules', function (Blueprint $table) {
+                $table->dropColumn('is_permission_target');
+            });
+        }
     }
 };

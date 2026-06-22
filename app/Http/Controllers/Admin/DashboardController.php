@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Admin\AdminDashboardService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -12,8 +13,14 @@ class DashboardController extends Controller
         private readonly AdminDashboardService $dashboard,
     ) {}
 
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
-        return view('admin.dashboard', $this->dashboard->screenData(auth()->user()));
+        $user = auth()->user();
+
+        if ($user?->isSecurityGuard()) {
+            return redirect()->route('admin.visitors.log');
+        }
+
+        return view('admin.dashboard', $this->dashboard->screenData($user));
     }
 }

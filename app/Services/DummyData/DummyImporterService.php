@@ -8,6 +8,7 @@ use App\Enums\FinancePaymentMode;
 use App\Enums\Gender;
 use App\Enums\HouseType;
 use App\Enums\MembershipRole;
+use App\Enums\WorkerType;
 use App\Models\FinanceCollection;
 use App\Models\FinanceExpense;
 use App\Models\MaintenanceChargeSetting;
@@ -88,8 +89,10 @@ class DummyImporterService
             'committee_users' => 0,
             'main_members' => 0,
             'family_members' => 0,
+            'workers' => 0,
             'maintenance_ledger_entries' => 0,
             'collections' => 0,
+            'worker_salary_payments' => 0,
             'expenses' => 0,
         ];
 
@@ -142,6 +145,11 @@ class DummyImporterService
                 );
             }
 
+            if ($config->workerCount > 0) {
+                $progress('Creating workers...');
+                $summary['workers'] = $this->seedWorkers($config, $actor, $now);
+            }
+
             $this->ensureMaintenanceCharges($actor, $config->financeFrom, $config->maintenanceCharge, $now);
             $this->ensureOpeningBalance($actor, $config->openingBalance, $config->openingBalanceFrom, $now);
 
@@ -160,9 +168,10 @@ class DummyImporterService
                 $now,
             );
 
-            if ($config->includeExpenses) {
+            if ($config->includeExpenses || $config->includeWorkerPayments) {
                 $progress('Creating finance expenses...');
-                $summary['expenses'] = $this->seedExpenses(
+                [$summary['expenses'], $summary['worker_salary_payments']] = $this->seedExpenses(
+                    $config,
                     $actor,
                     $config->financeFrom,
                     $config->financeTo,
@@ -213,18 +222,79 @@ class DummyImporterService
             $this->usedMobiles[(string) $mobile] = true;
         }
 
-        $maxMobile = User::query()
-            ->whereNotNull('mobile_number')
-            ->max('mobile_number');
+        foreach (Worker::query()->whereNotNull('mobile_number')->pluck('mobile_number') as $mobile) {
+            $this->usedMobiles[(string) $mobile] = true;
+        }
 
-        if ($maxMobile !== null && (int) $maxMobile >= $this->mobileCounter) {
-            $this->mobileCounter = (int) $maxMobile;
+        $maxMobile = max(
+            (int) (User::query()->whereNotNull('mobile_number')->max('mobile_number') ?? 0),
+            (int) (Worker::query()->whereNotNull('mobile_number')->max('mobile_number') ?? 0),
+        );
+
+        if ($maxMobile >= $this->mobileCounter) {
+            $this->mobileCounter = $maxMobile;
         }
     }
 
     /**
-     * @return list<array{house_type: HouseType, house_number: string}>
+     * @return list<WorkerType>
      */
+    private function workerTypeRotation(): array
+    {
+        return [
+            WorkerType::SecurityGuard,
+            WorkerType::SecurityGuard,
+            WorkerType::SecurityGuard,
+            WorkerType::Sweeper,
+            WorkerType::Gardener,
+            WorkerType::GarbageCollector,
+        ];
+    }
+
+    private function seedWorkers(DummyImporterConfig $config, User $actor, Carbon $now): int
+    {
+        $faker = $this->faker();
+        $types = $this->workerTypeRotation();
+        $joinedOn = $config->financeFrom->copy()->startOfMonth()->toDateString();
+        $count = 0;
+
+        for ($index = 0; $index < $config->workerCount; $index++) {
+            $type = $types[$index % count($types)];
+            $salary = $config->workerSalaryMin === $config->workerSalaryMax
+                ? $config->workerSalaryMin
+                : $faker->randomFloat(2, $config->workerSalaryMin, $config->workerSalaryMax);
+            $salary = round($salary, 2);
+
+            $worker = Worker::query()->create([
+                'worker_type' => $type->value,
+                'name' => $faker->name(),
+                'mobile_number' => $this->uniqueMobile(),
+                'address' => $faker->boolean(70)
+                    ? $type->label().' — '.$faker->streetAddress()
+                    : $type->label().' — society staff',
+                'joined_on' => $joinedOn,
+                'is_active' => true,
+                'notes' => self::DEMO_NOTE,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            WorkerSalaryRate::query()->create([
+                'worker_id' => $worker->id,
+                'monthly_salary' => $salary,
+                'effective_from' => $joinedOn,
+                'notes' => self::DEMO_NOTE,
+                'set_by_user_id' => $actor->id,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $count++;
+        }
+
+        return $count;
+    }
+
     private function allHouseSlots(): array
     {
         $slots = [];
@@ -602,93 +672,108 @@ class DummyImporterService
         return $count;
     }
 
-    private function seedExpenses(User $actor, Carbon $financeFrom, Carbon $financeTo, Carbon $now): int
-    {
+    /**
+     * @return array{0: int, 1: int}
+     */
+    private function seedExpenses(
+        DummyImporterConfig $config,
+        User $actor,
+        Carbon $financeFrom,
+        Carbon $financeTo,
+        Carbon $now,
+    ): array {
         $faker = $this->faker();
         $months = max(1, $financeFrom->diffInMonths($financeTo) + 1);
-        $targetCount = $months * $faker->numberBetween(4, 8);
+        $nonWorkerTarget = $config->includeExpenses
+            ? $months * $faker->numberBetween(4, 8)
+            : 0;
         $rows = [];
         $count = 0;
+        $workerPaymentCount = 0;
+        $nonWorkerCount = 0;
 
-        $workers = Worker::query()
-            ->with(['salaryRates' => fn ($query) => $query->orderByDesc('effective_from')])
-            ->get()
-            ->keyBy('id');
+        if ($config->includeWorkerPayments) {
+            $workers = Worker::query()
+                ->where('notes', self::DEMO_NOTE)
+                ->with(['salaryRates' => fn ($query) => $query->orderByDesc('effective_from')])
+                ->get()
+                ->keyBy('id');
 
-        foreach ($this->monthlyWorkerSalaryDates($financeFrom, $financeTo) as $paidOn) {
-            foreach ($workers as $worker) {
-                $rate = $this->salaryOnDate($worker, $paidOn);
+            foreach ($this->monthlyWorkerSalaryDates($financeFrom, $financeTo) as $paidOn) {
+                foreach ($workers as $worker) {
+                    $rate = $this->salaryOnDate($worker, $paidOn);
 
-                if (! $rate) {
-                    continue;
+                    if (! $rate) {
+                        continue;
+                    }
+
+                    $base = (float) $rate->monthly_salary;
+
+                    $rows[] = $this->buildExpenseRow(
+                        $worker->worker_type->expenseTag(),
+                        $base,
+                        $paidOn,
+                        $worker->name,
+                        $actor->id,
+                        $now,
+                        $worker->id,
+                        $base,
+                    );
+
+                    $count++;
+                    $workerPaymentCount++;
+
+                    if (count($rows) >= 500) {
+                        FinanceExpense::query()->insert($rows);
+                        $rows = [];
+                    }
                 }
+            }
+        }
 
-                $base = (float) $rate->monthly_salary;
+        if ($config->includeExpenses) {
+            $nonWorkerTags = [
+                FinanceExpenseTag::ElectricityBill,
+                FinanceExpenseTag::CameraMaintenanceCharge,
+                FinanceExpenseTag::SewageCharge,
+                FinanceExpenseTag::WaterTankerCharges,
+                FinanceExpenseTag::ElectricItemRepairing,
+                FinanceExpenseTag::GarbageCollectorPayment,
+                FinanceExpenseTag::Others,
+            ];
 
-                $rows[] = $this->buildExpenseRow(
-                    $worker->worker_type->expenseTag(),
-                    $base,
-                    $paidOn,
-                    $worker->name,
-                    $actor->id,
-                    $now,
-                    $worker->id,
-                    $base,
-                );
+            while ($nonWorkerCount < $nonWorkerTarget) {
+                $tag = $faker->randomElement($nonWorkerTags);
+                $paidOn = $this->randomDateBetween($financeFrom, $financeTo);
 
+                $amount = match ($tag) {
+                    FinanceExpenseTag::ElectricityBill => $faker->numberBetween(8000, 45000),
+                    FinanceExpenseTag::CameraMaintenanceCharge => $faker->numberBetween(1500, 6000),
+                    FinanceExpenseTag::SewageCharge => $faker->numberBetween(3000, 12000),
+                    FinanceExpenseTag::WaterTankerCharges => $faker->numberBetween(800, 3500),
+                    FinanceExpenseTag::ElectricItemRepairing => $faker->numberBetween(500, 8000),
+                    FinanceExpenseTag::GarbageCollectorPayment => $faker->numberBetween(2000, 5000),
+                    FinanceExpenseTag::Others => $faker->numberBetween(300, 15000),
+                };
+
+                $payee = match ($tag) {
+                    FinanceExpenseTag::ElectricityBill => $faker->randomElement(['Torrent Power', 'UGVCL', 'MGVCL']),
+                    FinanceExpenseTag::CameraMaintenanceCharge => 'CCTV Solutions',
+                    FinanceExpenseTag::SewageCharge => 'Municipal sewage vendor',
+                    FinanceExpenseTag::WaterTankerCharges => $faker->randomElement(['Aqua Tankers', 'Shree Water Supply']),
+                    FinanceExpenseTag::ElectricItemRepairing => $faker->randomElement(['Patel Electricals', 'Shah Repairs']),
+                    FinanceExpenseTag::GarbageCollectorPayment => 'City waste contractor',
+                    FinanceExpenseTag::Others => $faker->company(),
+                };
+
+                $rows[] = $this->buildExpenseRow($tag, (float) $amount, $paidOn, $payee, $actor->id, $now);
                 $count++;
+                $nonWorkerCount++;
 
                 if (count($rows) >= 500) {
                     FinanceExpense::query()->insert($rows);
                     $rows = [];
                 }
-
-                if ($count >= $targetCount) {
-                    break 2;
-                }
-            }
-        }
-
-        $nonWorkerTags = [
-            FinanceExpenseTag::ElectricityBill,
-            FinanceExpenseTag::CameraMaintenanceCharge,
-            FinanceExpenseTag::SewageCharge,
-            FinanceExpenseTag::WaterTankerCharges,
-            FinanceExpenseTag::ElectricItemRepairing,
-            FinanceExpenseTag::GarbageCollectorPayment,
-            FinanceExpenseTag::Others,
-        ];
-
-        while ($count < $targetCount) {
-            $tag = $faker->randomElement($nonWorkerTags);
-            $paidOn = $this->randomDateBetween($financeFrom, $financeTo);
-
-            $amount = match ($tag) {
-                FinanceExpenseTag::ElectricityBill => $faker->numberBetween(8000, 45000),
-                FinanceExpenseTag::CameraMaintenanceCharge => $faker->numberBetween(1500, 6000),
-                FinanceExpenseTag::SewageCharge => $faker->numberBetween(3000, 12000),
-                FinanceExpenseTag::WaterTankerCharges => $faker->numberBetween(800, 3500),
-                FinanceExpenseTag::ElectricItemRepairing => $faker->numberBetween(500, 8000),
-                FinanceExpenseTag::GarbageCollectorPayment => $faker->numberBetween(2000, 5000),
-                FinanceExpenseTag::Others => $faker->numberBetween(300, 15000),
-            };
-
-            $payee = match ($tag) {
-                FinanceExpenseTag::ElectricityBill => $faker->randomElement(['Torrent Power', 'UGVCL', 'MGVCL']),
-                FinanceExpenseTag::CameraMaintenanceCharge => 'CCTV Solutions',
-                FinanceExpenseTag::SewageCharge => 'Municipal sewage vendor',
-                FinanceExpenseTag::WaterTankerCharges => $faker->randomElement(['Aqua Tankers', 'Shree Water Supply']),
-                FinanceExpenseTag::ElectricItemRepairing => $faker->randomElement(['Patel Electricals', 'Shah Repairs']),
-                FinanceExpenseTag::GarbageCollectorPayment => 'City waste contractor',
-                FinanceExpenseTag::Others => $faker->company(),
-            };
-
-            $rows[] = $this->buildExpenseRow($tag, (float) $amount, $paidOn, $payee, $actor->id, $now);
-            $count++;
-
-            if (count($rows) >= 500) {
-                FinanceExpense::query()->insert($rows);
-                $rows = [];
             }
         }
 
@@ -696,7 +781,7 @@ class DummyImporterService
             FinanceExpense::query()->insert($rows);
         }
 
-        return $count;
+        return [$count, $workerPaymentCount];
     }
 
     private function committeeRoleForIndex(int $index): string

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Workers;
 
 use App\Http\Controllers\Admin\Workers\Concerns\OpensWorkerFormModal;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Workers\CreateWorkerLoginRequest;
 use App\Http\Requests\Admin\Workers\DestroyWorkerRequest;
 use App\Http\Requests\Admin\Workers\OpenEditWorkerRequest;
 use App\Http\Requests\Admin\Workers\StoreWorkerRequest;
@@ -11,6 +12,7 @@ use App\Http\Requests\Admin\Workers\StoreWorkerSalaryRequest;
 use App\Http\Requests\Admin\Workers\UpdateWorkerRequest;
 use App\Models\Worker;
 use App\Services\Admin\AdminWorkerService;
+use App\Services\Admin\WorkerLoginService;
 use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,18 +24,22 @@ class WorkerController extends Controller
 
     public function __construct(
         private readonly AdminWorkerService $workers,
+        private readonly WorkerLoginService $workerLogins,
     ) {}
 
     public function index(Request $request): View
     {
         $tab = $this->workers->resolveTab($request->string('tab')->toString());
         $editingWorker = $this->workers->editingWorker();
+        $loginCredentials = $this->workerLogins->pullFlashedCredentials();
 
         return view('admin.workers.index', [
             ...$this->workers->listForScreen($tab),
             'openAddWorkerModal' => $this->shouldOpenWorkerModal($request, 'add'),
             'openEditWorkerModal' => $editingWorker !== null || $this->shouldOpenWorkerModal($request, 'edit'),
             'openSalaryWorkerModal' => $this->shouldOpenWorkerModal($request, 'salary'),
+            'openCredentialsModal' => filled($loginCredentials),
+            'loginCredentials' => $loginCredentials,
             'editingWorker' => $editingWorker,
             'salaryHistory' => $editingWorker
                 ? $this->workers->salaryHistoryForScreen($editingWorker)
@@ -53,6 +59,18 @@ class WorkerController extends Controller
         Toast::success(__('messages.workers_created'));
 
         return redirect()->route('admin.workers.index', ['tab' => $request->input('worker_type')]);
+    }
+
+    public function createLogin(CreateWorkerLoginRequest $request): RedirectResponse
+    {
+        $worker = Worker::query()->findOrFail($request->integer('worker_id'));
+
+        $result = $this->workerLogins->createLoginProfile($worker, $request->user());
+        $this->workerLogins->rememberCredentials($worker, $result['username'], $result['plain_password']);
+
+        Toast::success(__('messages.workers_login_created'));
+
+        return redirect()->route('admin.workers.index', ['tab' => $worker->worker_type->value]);
     }
 
     public function openEdit(OpenEditWorkerRequest $request): RedirectResponse

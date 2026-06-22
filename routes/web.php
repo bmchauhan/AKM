@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\Finance\WorkerSalaryController;
 use App\Http\Controllers\Admin\Workers\WorkerController;
 use App\Http\Controllers\Admin\HouseController;
 use App\Http\Controllers\Admin\HouseTransferController;
+use App\Http\Controllers\Admin\VisitorEntryController;
 use App\Http\Controllers\Admin\MemberController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\PasswordController;
@@ -213,6 +214,8 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/my-payments', [MyPaymentController::class, 'index'])
                 ->name('my-payments.index');
+            Route::get('/my-payments/receipts/{receipt}/download', [MyPaymentController::class, 'downloadReceipt'])
+                ->name('my-payments.receipt.download');
         });
 
         Route::prefix('workers')->name('workers.')->group(function () {
@@ -222,6 +225,8 @@ Route::middleware('auth')->group(function () {
             Route::post('/', [WorkerController::class, 'store'])
                 ->middleware('admin.module:workers,create')
                 ->name('store');
+            Route::post('/create-login', [WorkerController::class, 'createLogin'])
+                ->name('create-login');
             Route::post('/open-edit', [WorkerController::class, 'openEdit'])
                 ->middleware('admin.module:workers,update')
                 ->name('open-edit');
@@ -263,6 +268,33 @@ Route::middleware('auth')->group(function () {
                 ->name('update');
             Route::delete('/', [MemberController::class, 'destroy'])
                 ->middleware('admin.module:members_all,delete')
+                ->name('destroy');
+        });
+
+        Route::prefix('visitors')->name('visitors.')->group(function () {
+            Route::get('/', [VisitorEntryController::class, 'index'])
+                ->middleware('admin.module:visitors_all,read')
+                ->name('index');
+            Route::get('/log', [VisitorEntryController::class, 'log'])
+                ->middleware('admin.module:visitors_log,create')
+                ->name('log');
+            Route::post('/', [VisitorEntryController::class, 'store'])
+                ->middleware('admin.module:visitors_log,create')
+                ->name('store');
+            Route::get('/today', [VisitorEntryController::class, 'today'])
+                ->middleware('admin.module:visitors_log,read')
+                ->name('today');
+            Route::post('/house-hosts', [VisitorEntryController::class, 'houseHosts'])
+                ->middleware('admin.module:visitors_log,read')
+                ->name('house-hosts');
+            Route::post('/checkout', [VisitorEntryController::class, 'checkout'])
+                ->middleware('admin.module:visitors_log,update')
+                ->name('checkout');
+            Route::get('/{visitorEntry}', [VisitorEntryController::class, 'show'])
+                ->middleware('admin.module:visitors_all,read')
+                ->name('show');
+            Route::delete('/', [VisitorEntryController::class, 'destroy'])
+                ->middleware('admin.module:visitors_all,delete')
                 ->name('destroy');
         });
 

@@ -47,6 +47,7 @@ class AdminWorkerService
         $activeTab = $this->resolveTab($tab);
 
         $workers = Worker::query()
+            ->with('user:id,username')
             ->where('worker_type', $activeTab)
             ->orderBy('name')
             ->paginate(20)
@@ -277,6 +278,9 @@ class AdminWorkerService
             'mobile' => $worker->mobile_number ?? '—',
             'profile_image_url' => $worker->profileImageUrl(),
             'is_active' => $worker->is_active,
+            'has_login' => $worker->user_id !== null,
+            'login_username' => $worker->user?->username,
+            'worker_type' => $worker->worker_type->value,
             'current_salary' => $currentRate
                 ? $this->fundSettings->formatMoney($currentRate->monthly_salary)
                 : '—',

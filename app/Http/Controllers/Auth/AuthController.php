@@ -33,6 +33,12 @@ class AuthController extends Controller
 
         Toast::success(__('messages.login_success'));
 
+        $user = auth()->user();
+
+        if ($user?->committee_role === 'security_guard') {
+            return redirect()->intended(route('admin.visitors.log'));
+        }
+
         return redirect()->intended(route('admin.dashboard'));
     }
 

@@ -20,6 +20,7 @@ class AdminFinanceCollectionService
         private readonly UserRepositoryInterface $users,
         private readonly AdminFinanceFundSettingService $fundSettings,
         private readonly AdminFinanceMaintenanceChargeService $maintenanceCharges,
+        private readonly FinancePaymentReceiptService $receipts,
     ) {}
 
     /**
@@ -166,10 +167,14 @@ class AdminFinanceCollectionService
             ]);
         }
 
-        return FinanceCollection::query()->create([
+        $collection = FinanceCollection::query()->create([
             ...$this->resolveCollectionPayload($data),
             'recorded_by_user_id' => $actor->id,
         ]);
+
+        $this->receipts->recordCollection($collection, $actor);
+
+        return $collection;
     }
 
     /**
